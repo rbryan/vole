@@ -11,6 +11,7 @@ import java.lang.System;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.math.BigInteger;
 
 
 class Expression{
@@ -29,12 +30,12 @@ class Expression{
 }
 
 class NumberVal extends Expression{
-	Number val;
-	NumberVal(Number val){
+	BigInteger val;
+	NumberVal(BigInteger val){
 		this.val = val;
 	}
 
-	Number getVal(){
+	BigInteger getVal(){
 		return val;
 	}
 }
@@ -184,50 +185,54 @@ class Evaluator{
 
 }
 
-public class Vole{ 
+class Parser{
+	Reader input;
 
-	public static void main(String[] args){
-
-		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
-		Scanner inputScanner = new Scanner(System.in);
-		Evaluator evaluator = new Evaluator();
-
-		while(true){
-			try{
-				writer.write("jlisp>");
-				writer.flush();
-				String input = inputScanner.nextLine();
-				Expression exp = parseSexp(new StringReader(input));
-				Expression result = evaluator.eval(exp);
-				printExpression(result, writer);
-				writer.write("\n");
-				writer.flush();
-			}catch(Exception e){
-				e.printStackTrace();
-			}
-		}	
+	Parser(){
+		this.input = new BufferedReader(new InputStreamReader(System.in));
 	}
 
+	Parser(Reader input){
+		this.input = input;
+	}
 
-	static int peek(Reader r){
+	void setInput(Reader input){
+		this.input = input;
+	}
+
+	Reader getInput(){
+		return input;
+	}
+
+	int peek(){
 		int c = 0;
 		try{
-			r.mark(1);
-			c = (char) r.read();
-			r.reset();
+			input.mark(1);
+			c = (char) input.read();
+			input.reset();
 		}catch(Exception e){
 			e.printStackTrace();
 		}
 		return c;
 	}
 
-	static void printExpression(Expression expr, Writer out){
+	void printExpression(Expression expr, Writer out){
 		try{
 			if(expr instanceof Pair){
 				Pair p = (Pair) expr;
 				if(p.isNil()){
 					out.write("nil");
+				}else if(p.isList()){
+					out.write("(");
+					if(p.getCar() != null){
+						printExpression(p.getCar(),out);
+						out.write(" ");
+					}
+
+					if(p.getCdr() != null){
+						printExpression(p.getCdr(),out);
+					}
+					out.write(")");
 				}else{
 					out.write("(");
 					if(p.getCar() != null){
@@ -264,13 +269,16 @@ public class Vole{
 		}
 	}
 
-	static BooleanVal parseBoolean(Reader input){
+	BooleanVal parseBoolean(){
 		try{
 			input.read();
-			if(input.read() == 't')
+			int c = input.read();
+			if(c == 't')
 				return new BooleanVal(true);
-			else
+			else if(c == 'f')
 				return new BooleanVal(false);
+			else
+				throw new Exception("Attempted to parse boolean but no boolean to be found.");
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -278,13 +286,12 @@ public class Vole{
 		return null;
 	}
 
-	static NumberVal parseNumber(Reader input){
-		System.out.println("Called parseNumber();");
+	NumberVal parseNumber(){
 		StringBuilder builder = new StringBuilder();
 		int c = 0;
 
 		try{
-			c = peek(input);
+			c = peek();
 			while( 	c != '#' &&
 				c != '(' &&
 				c != ')' &&
@@ -295,22 +302,23 @@ public class Vole{
 				
 				builder.append((char) c);
 				input.read();
-				c = peek(input);
+				c = peek();
 			}
 		}catch(Exception e){
 			e.printStackTrace();
 		}
 
-		return new NumberVal(Integer.parseInt(builder.toString()));
+		Scanner s = new Scanner(builder.toString());
+
+		return new NumberVal(s.nextBigInteger());
 	}
 
-	static SymbolVal parseSymbol(Reader input){
-		System.out.println("Called parseSymbol();");
+	SymbolVal parseSymbol(){
 		StringBuilder builder = new StringBuilder();
 		int c = 0;
 
 		try{
-			c = peek(input);
+			c = peek();
 			while( 	c != '#' &&
 				c != '(' &&
 				c != ')' &&
@@ -320,7 +328,7 @@ public class Vole{
 				
 				builder.append((char) c);
 				input.read();
-				c = peek(input);
+				c = peek();
 			}
 		}catch(Exception e){
 			e.printStackTrace();
@@ -330,27 +338,26 @@ public class Vole{
 
 	}
 
-	static void parseComment(Reader input){
+	void parseComment(){
 		Scanner scanner = new Scanner(input);
 		scanner.useDelimiter("[\n]");
 		String s = scanner.next(";.*");
 		return;
 	}
 
-	static Pair parseList(Reader input){
-		System.out.println("Called parseList()");
+	Pair parseList(){
 		int c;
 		Pair head = null;
 		Pair tail = null;
 
 		try{
-			c = peek(input);
+			c = peek();
 
 			if(c == '('){
 				//eat the '('
 				input.read();
 				
-				c = peek(input);
+				c = peek();
 
 				if((short) c == -1)
 					throw new Exception("Unmatched '(' in file.");
@@ -360,23 +367,23 @@ public class Vole{
 					Expression exp = null;
 
 					if(c == '(')
-						exp = parseList(input);
+						exp = parseList();
 
 					else if(c == '#')
-						exp = parseBoolean(input);
+						exp = parseBoolean();
 
 					else if(c == ';'){
-						parseComment(input);
-						c = peek(input);
+						parseComment();
+						c = peek();
 						continue;
 					}
 					
 					else if(Character.isDigit(c))
-						exp = parseNumber(input);
+						exp = parseNumber();
 
 					else if(Character.isWhitespace(c)){
 						input.read();
-						c = peek(input);
+						c = peek();
 						continue;
 					}
 
@@ -385,7 +392,7 @@ public class Vole{
 
 					//If it's none of those things it must be a symbol
 					else 
-						exp = parseSymbol(input);
+						exp = parseSymbol();
 					
 					if(head == null){
 						head = new Pair(exp,null);
@@ -396,7 +403,7 @@ public class Vole{
 						tail = newTail;
 					}
 
-					c = peek(input);
+					c = peek();
 
 				}
 
@@ -420,35 +427,35 @@ public class Vole{
 
 	}
 
-	static Expression parseSexp(Reader input){
+	Expression parseSexp(){
 
 		int c;
 
 		try{
-			c = peek(input);
+			c = peek();
 
 			while((short) c != -1){
 				if(Character.isWhitespace(c)){
 					input.read();
-					c = peek(input);
+					c = peek();
 					continue;
 				}
 
 				else if(c == '#'){
-					return parseBoolean(input);
+					return parseBoolean();
 				}
 
 				else if(Character.isDigit(c)){
-					return parseNumber(input);
+					return parseNumber();
 				}
 				
 				else if(c == '('){
-					return parseList(input);
+					return parseList();
 				}
 
 				else if(c == ';'){
-					parseComment(input);
-					c = peek(input);
+					parseComment();
+					c = peek();
 					continue;
 				}
 				else if(c == ')'){
@@ -456,7 +463,7 @@ public class Vole{
 				}
 
 				else
-					return parseSymbol(input);
+					return parseSymbol();
 				
 
 			}
@@ -467,6 +474,37 @@ public class Vole{
 
 		return null;
 	}
+
+
+}
+
+public class Vole{ 
+
+	public static void main(String[] args){
+		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+		Scanner inputScanner = new Scanner(System.in);
+		Parser parser = new Parser();
+		Evaluator evaluator = new Evaluator();
+
+		while(true){
+			try{
+				writer.write("jlisp>");
+				writer.flush();
+				String input = inputScanner.nextLine();
+				parser.setInput(new StringReader(input));
+				Expression exp = parser.parseSexp();
+				Expression result = evaluator.eval(exp);
+				parser.printExpression(result, writer);
+				writer.write("\n");
+				writer.flush();
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}	
+	}
+
+
 
 
 }
