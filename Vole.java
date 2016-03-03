@@ -489,7 +489,7 @@ public class Vole{
 
 		while(true){
 			try{
-				writer.write("jlisp>");
+				writer.write("vole>");
 				writer.flush();
 				String input = inputScanner.nextLine();
 				parser.setInput(new StringReader(input));
