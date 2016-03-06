@@ -14,22 +14,67 @@ import java.util.HashMap;
 import java.math.BigInteger;
 
 
-class Expression{
-	Expression(){
-		
+abstract class Expression{
+	Expression(){}
+
+	boolean isAtom(){
+		//if(this instanceof Atom)
+			//return true;
+		return false;
 	}
 
-	boolean isList(){
-		if(this instanceof Pair){
-			Pair p = (Pair) this;
-			if(p.cdr instanceof Pair)
-				return true;
-		}
+	boolean isNumber(){
+		if(this instanceof NumberVal)
+			return true;
 		return false;
+	}
+
+	boolean isSymbol(){
+		if(this instanceof SymbolVal)
+			return true;
+		return false;
+	}
+
+	boolean isBoolean(){
+		if(this instanceof BooleanVal)
+			return true;
+		return false;
+	}
+
+	boolean isPair(){
+		if(this instanceof Pair)
+			return true;
+		return false;
+	}
+
+	boolean isProcedure(){
+		if(this instanceof ProcedureVal)
+			return true;
+		return false;
+	}
+
+	boolean isLambda(){
+		if(this instanceof Lambda)
+			return true;
+		return false;
+	}
+
+	boolean isJavaFunction(){
+		if(this instanceof JavaFunction)
+			return true;
+		return false;
+	}
+
+}
+
+abstract class Atom extends Expression{
+	Atom(){}
+	boolean isAtom() {
+		return true;
 	}
 }
 
-class NumberVal extends Expression{
+class NumberVal extends Atom{
 	BigInteger val;
 	NumberVal(BigInteger val){
 		this.val = val;
@@ -40,7 +85,7 @@ class NumberVal extends Expression{
 	}
 }
 
-class SymbolVal extends Expression{
+class SymbolVal extends Atom{
 	String identifier;
 
 	SymbolVal(String ident){
@@ -50,9 +95,24 @@ class SymbolVal extends Expression{
 	String getIdentifier(){
 		return identifier;
 	}
+
+	@Override
+	public boolean equals(Object key){
+		if(key instanceof SymbolVal){
+			SymbolVal keySym = (SymbolVal) key;
+			if(keySym.getIdentifier().equals(this.identifier))
+				return true;
+		}
+		return false;
+	}
+
+	@Override
+	public int hashCode() {
+		return identifier.hashCode();
+	}
 }
 
-class BooleanVal extends Expression{
+class BooleanVal extends Atom{
 	boolean val;
 
 	BooleanVal(Boolean val){
@@ -94,14 +154,33 @@ class Pair extends Expression{
 			return true;
 		return false;
 	}
+
+	boolean isList(){
+		if(cdr instanceof Pair)
+			return true;
+		return false;
+	}
 }
 
-class ProcedureVal extends Expression{
+
+//Interface for adding functions written in java
+abstract class ProcedureVal extends Atom{
+	ProcedureVal(){}
+}
+
+//look at using anonymous classes for these
+abstract class JavaFunction extends ProcedureVal{
+	JavaFunction(){}
+	abstract Expression call(Expression args);
+}
+
+
+class Lambda extends ProcedureVal {
 	Environment closure;
 	SymbolVal arg;
 	Expression exp;
 
-	ProcedureVal(Environment closure, SymbolVal arg, Expression exp){
+	Lambda(Environment closure, SymbolVal arg, Expression exp){
 		this.closure = closure;
 		this.arg = arg;
 		this.exp = exp;
@@ -126,7 +205,9 @@ class ProcedureVal extends Expression{
 		return newEnv;
 	}
 
+
 }
+
 
 class Environment{
 	Map<SymbolVal,Expression> map;
@@ -151,6 +232,14 @@ class Environment{
 		this.map.putAll(env.getMap());
 	}
 
+	Expression lookUp(SymbolVal val){
+		Expression result = map.get(val);
+		if(result == null)
+			System.out.println(val.getIdentifier() + " is undefined.");
+
+		return result;
+	}
+
 }
 
 class Evaluator{
@@ -164,24 +253,148 @@ class Evaluator{
 		this.env = def;
 	}
 
+	Expression apply(Expression fn, Expression args){
+		try{
+			Parser printer = new Parser();
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+			System.out.print("apply() called on:\t");
+			printer.printExpression(new Pair(fn,args),writer);
+			try{
+				writer.flush();
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			System.out.println();
+
+			if(fn.isAtom()){
+				if(fn.isSymbol())
+					return apply(env.lookUp((SymbolVal)fn),args);
+				else if(fn.isLambda()){
+					Lambda lambda = (Lambda) fn;
+					Environment oldEnvironment = env;
+					env = lambda.getEvalEnvironment(((Pair)args).getCdr(),env);
+					Expression result = eval(lambda.getExp());
+					env = oldEnvironment;
+					return result;
+				}else if(fn.isJavaFunction()){
+					System.out.println("Apply called a javafunction.");
+					JavaFunction jfunc = (JavaFunction) fn;
+					return jfunc.call(args);
+				}else{
+					throw new Exception("Apply can't apply that type.");
+				}
+
+			}else{
+				return apply(eval(fn),args);
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 	Expression eval(Expression exp){
 		return eval(exp,env);
 	}
 
+
 	Expression eval(Expression exp, Environment env){
-		if(exp.isList()){
-			Pair list = (Pair) exp;
-			Expression procExpr = eval(list.getCar(),env);
-			if(procExpr instanceof ProcedureVal){
-				ProcedureVal proc = (ProcedureVal) procExpr;
-				Environment evalEnv = proc.getEvalEnvironment(list.getCdr(),env);
-				return eval(proc.getExp(),evalEnv);
+		try{
+			System.out.println(env.getMap());
+			Parser printer = new Parser();
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+			System.out.print("eval() called on:\t");
+			printer.printExpression(exp,writer);
+			try{
+				writer.flush();
+			}catch(Exception e){
+				e.printStackTrace();
 			}
-		}
-		
-		return exp;
+			System.out.println();
 			
+			if(exp.isAtom()){
+				if(exp.isSymbol()){
+					System.out.println("Looked up " + ((SymbolVal) exp).getIdentifier());
+					return env.lookUp((SymbolVal) exp);
+				}else{
+					return exp;
+				}
+			}else if(exp.isPair()){
+				Pair expPair = (Pair) exp;
+				Expression car = expPair.getCar();
+				if(car.isAtom()){
+					if(car instanceof SymbolVal){
+						SymbolVal sym = (SymbolVal) car;
+						if(sym.getIdentifier().equals("quote"))
+							return ((Pair)expPair.getCdr()).getCar();
+						else
+							return apply(eval(car),evlis(expPair.getCdr()));	
+							
+					}else{
+						return apply(car,evlis(expPair.getCdr()));
+					}	
+				}
+			}else{
+				Pair expPair = (Pair) exp;
+				return apply(expPair.getCar(),evlis(expPair.getCdr()));
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+
+		System.out.println("Eval couldn't figure out what to do.");
+
+		return null;
+
 	}
+
+	Expression evlis(Expression list){
+		if(list.isAtom())
+			return list;
+		else{
+			Pair listPair = (Pair) list;
+			if(listPair.isNil())
+				return listPair;
+			else
+				return new Pair(eval(listPair.getCar()),evlis(listPair.getCdr()));
+		}
+	}
+
+	boolean eq(Expression a, Expression b){
+		if(	a instanceof NumberVal &&
+			b instanceof NumberVal){
+			if(	((NumberVal) a).getVal().equals(((NumberVal) b).getVal()))
+				return true;
+			else
+				return false;
+		}
+		if(	a instanceof SymbolVal &&
+			b instanceof SymbolVal){
+			if(((SymbolVal) a).getIdentifier().equals(((SymbolVal) b).getIdentifier()))
+				return true;
+			else
+				return false;
+		}
+		if(	a instanceof BooleanVal &&
+			b instanceof BooleanVal){
+			if(((BooleanVal) a).getVal() == ((BooleanVal) b).getVal())
+				return true;
+			else
+				return false;
+		}
+		if(	a instanceof Pair &&
+			b instanceof Pair){
+			if(	((Pair) a).isNil() &&
+				((Pair) b).isNil())
+				return true;
+			else
+				return false;
+
+		}
+		return false;
+
+	}
+
 
 }
 
@@ -222,17 +435,6 @@ class Parser{
 				Pair p = (Pair) expr;
 				if(p.isNil()){
 					out.write("nil");
-				}else if(p.isList()){
-					out.write("(");
-					if(p.getCar() != null){
-						printExpression(p.getCar(),out);
-						out.write(" ");
-					}
-
-					if(p.getCdr() != null){
-						printExpression(p.getCdr(),out);
-					}
-					out.write(")");
 				}else{
 					out.write("(");
 					if(p.getCar() != null){
@@ -262,6 +464,14 @@ class Parser{
 			if(expr instanceof SymbolVal){
 				SymbolVal val = (SymbolVal) expr;
 				out.write(val.getIdentifier());
+				return;
+			}
+			if(expr instanceof Lambda){
+				out.write("<Lambda Proc>");
+				return;
+			}
+			if(expr instanceof JavaFunction){
+				out.write("<JavaFunction Proc>");
 				return;
 			}
 		}catch(Exception e){
@@ -478,6 +688,31 @@ class Parser{
 
 }
 
+class Add extends JavaFunction{
+	Add(){}
+
+	public Expression call(Expression exp){
+		Pair expPair = (Pair) exp;
+		NumberVal a = (NumberVal) (expPair.getCar());
+		NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+		return new NumberVal(a.getVal().add(b.getVal()));
+	}
+}
+
+
+
+class Cons extends JavaFunction{
+	public Cons(){}
+
+	public Expression call(Expression exp){
+		Pair list = (Pair) exp;
+		Expression a = list.getCar();
+		Expression b = ((Pair)list.getCdr()).getCar();
+		return new Pair(a,b);
+	}
+}
+
 public class Vole{ 
 
 	public static void main(String[] args){
@@ -485,7 +720,10 @@ public class Vole{
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 		Scanner inputScanner = new Scanner(System.in);
 		Parser parser = new Parser();
-		Evaluator evaluator = new Evaluator();
+		Environment env = new Environment();
+		env.add(new SymbolVal("cons"),new Cons());
+		env.add(new SymbolVal("+"),new Add());
+		Evaluator evaluator = new Evaluator(env);
 
 		while(true){
 			try{
