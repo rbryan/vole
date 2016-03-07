@@ -18,13 +18,25 @@ abstract class Expression{
 	Expression(){}
 
 	boolean isAtom(){
-		//if(this instanceof Atom)
-			//return true;
+		if(this instanceof Atom)
+			return true;
+		return false;
+	}
+	
+	static boolean isAtom(Expression e){
+		if(e instanceof Atom)
+			return true;
 		return false;
 	}
 
 	boolean isNumber(){
 		if(this instanceof NumberVal)
+			return true;
+		return false;
+	}
+
+	static boolean isNumber(Expression e){
+		if(e instanceof NumberVal)
 			return true;
 		return false;
 	}
@@ -35,8 +47,20 @@ abstract class Expression{
 		return false;
 	}
 
+	static boolean isSymbol(Expression e){
+		if(e instanceof SymbolVal)
+			return true;
+		return false;
+	}
+
 	boolean isBoolean(){
 		if(this instanceof BooleanVal)
+			return true;
+		return false;
+	}
+
+	static boolean isBoolean(Expression e){
+		if(e instanceof BooleanVal)
 			return true;
 		return false;
 	}
@@ -47,8 +71,20 @@ abstract class Expression{
 		return false;
 	}
 
+	static boolean isPair(Expression e){
+		if(e instanceof Pair)
+			return true;
+		return false;
+	}
+
 	boolean isProcedure(){
 		if(this instanceof ProcedureVal)
+			return true;
+		return false;
+	}
+
+	static boolean isProcedure(Expression e){
+		if(e instanceof ProcedureVal)
 			return true;
 		return false;
 	}
@@ -59,9 +95,59 @@ abstract class Expression{
 		return false;
 	}
 
+	static boolean isLambda(Expression e){
+		if(e instanceof Lambda)
+			return true;
+		return false;
+	}
+
 	boolean isJavaFunction(){
 		if(this instanceof JavaFunction)
 			return true;
+		return false;
+	}
+
+	static boolean isJavaFunction(Expression e){
+		if(e instanceof JavaFunction)
+			return true;
+		return false;
+	}
+
+	boolean isNil(){
+		if(this.isPair()){
+			Expression car = ((Pair) this).getCar();
+			Expression cdr = ((Pair) this).getCdr();
+			if(car == null && cdr == null)
+				return true;
+		}
+		return false;
+	}
+
+	static boolean isNil(Expression e){
+		if(e.isPair()){
+			Expression car = ((Pair) e).getCar();
+			Expression cdr = ((Pair) e).getCdr();
+			if(car == null && cdr == null)
+				return true;
+		}
+		return false;
+	}
+
+	boolean isList(){
+		if(this.isPair()){
+			Expression cdr = ((Pair) this).getCdr();
+			if(cdr instanceof Pair)
+				return true;
+		}
+		return false;
+	}
+
+	static boolean isList(Expression e){
+		if(e.isPair()){
+			Expression cdr = ((Pair) e).getCdr();
+			if(cdr instanceof Pair)
+				return true;
+		}
 		return false;
 	}
 
@@ -69,9 +155,6 @@ abstract class Expression{
 
 abstract class Atom extends Expression{
 	Atom(){}
-	boolean isAtom() {
-		return true;
-	}
 }
 
 class NumberVal extends Atom{
@@ -149,17 +232,6 @@ class Pair extends Expression{
 		car = exp;
 	}
 
-	boolean isNil(){
-		if(car == null && cdr == null)
-			return true;
-		return false;
-	}
-
-	boolean isList(){
-		if(cdr instanceof Pair)
-			return true;
-		return false;
-	}
 }
 
 
@@ -688,19 +760,6 @@ class Parser{
 
 }
 
-class Add extends JavaFunction{
-	Add(){}
-
-	public Expression call(Expression exp){
-		Pair expPair = (Pair) exp;
-		NumberVal a = (NumberVal) (expPair.getCar());
-		NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
-
-		return new NumberVal(a.getVal().add(b.getVal()));
-	}
-}
-
-
 
 class Cons extends JavaFunction{
 	public Cons(){}
@@ -713,6 +772,33 @@ class Cons extends JavaFunction{
 	}
 }
 
+
+
+class MathLib{
+
+	MathLib(){}
+
+	static Environment getEnv(){
+
+		Environment env = new Environment();
+
+		JavaFunction add = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+				return new NumberVal(a.getVal().add(b.getVal()));
+			}
+		};
+
+		env.add(new SymbolVal("+"),add);
+
+		return env;
+	}
+
+}
+
 public class Vole{ 
 
 	public static void main(String[] args){
@@ -722,7 +808,7 @@ public class Vole{
 		Parser parser = new Parser();
 		Environment env = new Environment();
 		env.add(new SymbolVal("cons"),new Cons());
-		env.add(new SymbolVal("+"),new Add());
+		env.concat(MathLib.getEnv());
 		Evaluator evaluator = new Evaluator(env);
 
 		while(true){
