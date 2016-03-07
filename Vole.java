@@ -424,6 +424,8 @@ class Evaluator{
 						SymbolVal sym = (SymbolVal) car;
 						if(sym.getIdentifier().equals("lambda"))
 							return new Lambda(cdr,env);
+						else if(sym.getIdentifier().equals("quote"))
+							return ((Pair) cdr).getCar();
 					}
 					return apply(car,evlis(cdr));
 				}else{
@@ -525,49 +527,92 @@ class Parser{
 		return c;
 	}
 
+	static void printList(Expression expr, Writer out) throws Exception{
+		if(expr.isList()){
+			Pair p = (Pair) expr;
+			printExpression(p.getCar(),out);
+			if(p.getCdr().isPair() && ! p.getCdr().isNil()){
+				out.write(" ");
+				printList(p.getCdr(),out);
+			}
+		}else{
+			printExpression(expr,out);
+		}
+	}
+
+	static void printPair(Expression expr, Writer out) throws Exception{
+		Pair p = (Pair) expr;
+		if(p.isNil()){
+			out.write("nil");
+		}else{
+			out.write("(");
+			if(p.getCar() != null){
+				printExpression(p.getCar(),out);
+				out.write(" ");
+			}
+			out.write(" . ");
+			if(p.getCdr() != null)
+				printExpression(p.getCdr(),out);
+			out.write(")");
+		}
+	}
+
+	static void printBoolean(Expression expr, Writer out) throws Exception{
+		BooleanVal val = (BooleanVal) expr;
+		if(val.getVal())
+			out.write("#t");
+		else
+			out.write("#f");
+	}
+
+	static void printNumber(Expression expr, Writer out) throws Exception{
+		NumberVal val = (NumberVal) expr;
+		out.write(val.getVal().toString());
+	}
+
+	static void printSymbol(Expression expr, Writer out) throws Exception{
+		SymbolVal val = (SymbolVal) expr;
+		out.write(val.getIdentifier());
+	}
+
+	static void printLambda(Expression expr, Writer out) throws Exception{
+		out.write("<Lambda Proc>");
+	}
+
+	static void printJavaFunction(Expression expr, Writer out) throws Exception{
+		out.write("<JavaFunction Proc>");
+	}
+
 	static void printExpression(Expression expr, Writer out){
 		try{
-			if(expr instanceof Pair){
-				Pair p = (Pair) expr;
-				if(p.isNil()){
-					out.write("nil");
-				}else{
-					out.write("(");
-					if(p.getCar() != null){
-						printExpression(p.getCar(),out);
-						out.write(" ");
-					}
-					out.write(" . ");
-					if(p.getCdr() != null)
-						printExpression(p.getCdr(),out);
-					out.write(")");
-				}
+			if(expr.isList()){
+				out.write("(");
+				printList(expr,out);
+				out.write(")");
 				return;
 			}
-			if(expr instanceof BooleanVal){
-				BooleanVal val = (BooleanVal) expr;
-				if(val.getVal())
-					out.write("#t");
-				else
-					out.write("#f");
+			if(expr.isPair()){
+				printPair(expr,out);
 				return;
 			}
-			if(expr instanceof NumberVal){
-				NumberVal val = (NumberVal) expr;
-				out.write(val.getVal().toString());
+			if(expr.isBoolean()){
+				printBoolean(expr,out);
 				return;
 			}
-			if(expr instanceof SymbolVal){
-				SymbolVal val = (SymbolVal) expr;
-				out.write(val.getIdentifier());
+			if(expr.isNumber()){
+				printNumber(expr,out);
 				return;
 			}
-			if(expr instanceof Lambda){
-				out.write("<Lambda Proc>");
+			if(expr.isSymbol()){
+				printSymbol(expr,out);
 				return;
 			}
-			if(expr instanceof JavaFunction){
-				out.write("<JavaFunction Proc>");
+			if(expr.isLambda()){
+				printLambda(expr,out);
+				return;
+			}
+			if(expr.isJavaFunction()){
+				printJavaFunction(expr,out);
 				return;
 			}
 		}catch(Exception e){
@@ -807,8 +852,18 @@ class Core{
 				return exp;
 			}
 		};
-
 		env.add(new SymbolVal("quote"), quote);
+
+		JavaFunction cons = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair list = (Pair) exp;
+				Expression a = list.getCar();
+				Expression b = ((Pair)list.getCdr()).getCar();
+				return new Pair(a,b);
+			}
+		};
+		env.add(new SymbolVal("cons"),cons);
+
 
 		return env;
 	}
@@ -848,7 +903,7 @@ public class Vole{
 		Scanner inputScanner = new Scanner(System.in);
 		Parser parser = new Parser();
 		Environment env = new Environment();
-		env.add(new SymbolVal("cons"),new Cons());
+		env.concat(Core.getEnv());
 		env.concat(MathLib.getEnv());
 		Evaluator evaluator = new Evaluator(env);
 
