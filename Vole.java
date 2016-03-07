@@ -257,6 +257,29 @@ class Lambda extends ProcedureVal {
 		this.arg = arg;
 		this.exp = exp;
 	}
+	
+	Lambda(Expression exp, Environment env){
+		try{
+			closure = new Environment(env);
+			if(exp.isPair()){
+				Expression car = ((Pair) exp).getCar();
+				Expression cdr = ((Pair) exp).getCdr();
+				if(car.isSymbol()){
+					arg = (SymbolVal) car;
+				}else if(car.isNil()){
+					arg = null;
+				}else{
+					throw new Exception("Lambda expects the first argument to be a symbol or nil.");
+				}
+				this.exp = ((Pair)cdr).getCar();
+			}else{
+				throw new Exception("Lambda arguments in an unexpected form.");
+			}
+
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
 
 	Environment getClosure(){
 		return closure;
@@ -273,7 +296,8 @@ class Lambda extends ProcedureVal {
 	Environment getEvalEnvironment(Expression val, Environment env){
 		Environment newEnv = new Environment(env);
 		newEnv.concat(closure);
-		newEnv.add(arg,val);
+		if(arg != null)
+			newEnv.add(arg,val);
 		return newEnv;
 	}
 
@@ -344,7 +368,7 @@ class Evaluator{
 				else if(fn.isLambda()){
 					Lambda lambda = (Lambda) fn;
 					Environment oldEnvironment = env;
-					env = lambda.getEvalEnvironment(((Pair)args).getCdr(),env);
+					env = lambda.getEvalEnvironment(((Pair)args).getCar(),env);
 					Expression result = eval(lambda.getExp());
 					env = oldEnvironment;
 					return result;
@@ -391,25 +415,25 @@ class Evaluator{
 				}else{
 					return exp;
 				}
-			}else if(exp.isPair()){
-				Pair expPair = (Pair) exp;
-				Expression car = expPair.getCar();
+			}else if(exp.isList()){
+				Pair expList = (Pair) exp;
+				Expression car = expList.getCar();
+				Expression cdr = expList.getCdr();
 				if(car.isAtom()){
 					if(car instanceof SymbolVal){
 						SymbolVal sym = (SymbolVal) car;
-						if(sym.getIdentifier().equals("quote"))
-							return ((Pair)expPair.getCdr()).getCar();
-						else
-							return apply(eval(car),evlis(expPair.getCdr()));	
-							
-					}else{
-						return apply(car,evlis(expPair.getCdr()));
-					}	
+						if(sym.getIdentifier().equals("lambda"))
+							return new Lambda(cdr,env);
+					}
+					return apply(car,evlis(cdr));
+				}else{
+					return apply(eval(car),evlis(cdr));
+					
 				}
-			}else{
-				Pair expPair = (Pair) exp;
-				return apply(expPair.getCar(),evlis(expPair.getCdr()));
+
+
 			}
+
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -432,7 +456,7 @@ class Evaluator{
 		}
 	}
 
-	boolean eq(Expression a, Expression b){
+	static boolean eq(Expression a, Expression b){
 		if(	a instanceof NumberVal &&
 			b instanceof NumberVal){
 			if(	((NumberVal) a).getVal().equals(((NumberVal) b).getVal()))
@@ -501,7 +525,7 @@ class Parser{
 		return c;
 	}
 
-	void printExpression(Expression expr, Writer out){
+	static void printExpression(Expression expr, Writer out){
 		try{
 			if(expr instanceof Pair){
 				Pair p = (Pair) expr;
@@ -772,7 +796,24 @@ class Cons extends JavaFunction{
 	}
 }
 
+class Core{
+	Core(){}
 
+	static Environment getEnv(){
+		Environment env = new Environment();
+
+		JavaFunction quote = new JavaFunction(){
+			Expression call(Expression exp){
+				return exp;
+			}
+		};
+
+		env.add(new SymbolVal("quote"), quote);
+
+		return env;
+	}
+
+}
 
 class MathLib{
 
