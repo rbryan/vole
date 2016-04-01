@@ -429,6 +429,11 @@ class Evaluator{
 								Expression cadr = ((Pair) cdr).getCar();
 								Expression caddr =((Pair) ((Pair) cdr).getCdr()).getCar();
 								if(cadr.isSymbol()){
+									String name = ((SymbolVal) cadr).getIdentifier();
+									Expression currentValue = env.lookUp((SymbolVal) cadr);
+									if(currentValue != null){
+										throw new Exception("Symbol ".concat(name).concat(" is already defined."));
+									}		
 									env.add((SymbolVal) cadr, caddr);
 									return null;
 								}else{
