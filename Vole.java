@@ -396,7 +396,6 @@ class Evaluator{
 
 	Expression eval(Expression exp, Environment env){
 		try{
-			System.out.println(env.getMap());
 			Parser printer = new Parser();
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 			System.out.print("eval() called on:\t");
@@ -410,7 +409,6 @@ class Evaluator{
 			
 			if(exp.isAtom()){
 				if(exp.isSymbol()){
-					System.out.println("Looked up " + ((SymbolVal) exp).getIdentifier());
 					return env.lookUp((SymbolVal) exp);
 				}else{
 					return exp;
@@ -420,12 +418,26 @@ class Evaluator{
 				Expression car = expList.getCar();
 				Expression cdr = expList.getCdr();
 				if(car.isAtom()){
-					if(car instanceof SymbolVal){
+					if(car.isSymbol()){
 						SymbolVal sym = (SymbolVal) car;
 						if(sym.getIdentifier().equals("lambda"))
 							return new Lambda(cdr,env);
 						else if(sym.getIdentifier().equals("quote"))
 							return ((Pair) cdr).getCar();
+						else if(sym.getIdentifier().equals("define")){
+							if(cdr.isList()){
+								Expression cadr = ((Pair) cdr).getCar();
+								Expression caddr =((Pair) ((Pair) cdr).getCdr()).getCar();
+								if(cadr.isSymbol()){
+									env.add((SymbolVal) cadr, caddr);
+									return null;
+								}else{
+									throw new Exception("define expects a symbol as the first argument.");
+								}
+							}else{
+								throw new Exception("define expects at least two arguments.");
+							}
+						}
 					}
 					return apply(car,evlis(cdr));
 				}else{
@@ -543,14 +555,13 @@ class Parser{
 	static void printPair(Expression expr, Writer out) throws Exception{
 		Pair p = (Pair) expr;
 		if(p.isNil()){
-			out.write("nil");
+			out.write("(quote ())");
 		}else{
-			out.write("(");
+			out.write("(cons ");
 			if(p.getCar() != null){
 				printExpression(p.getCar(),out);
 				out.write(" ");
 			}
-			out.write(" . ");
 			if(p.getCdr() != null)
 				printExpression(p.getCdr(),out);
 			out.write(")");
@@ -585,6 +596,8 @@ class Parser{
 
 	static void printExpression(Expression expr, Writer out){
 		try{
+			if(expr == null)
+				return;
 			if(expr.isList()){
 				out.write("(");
 				printList(expr,out);
@@ -830,29 +843,11 @@ class Parser{
 }
 
 
-class Cons extends JavaFunction{
-	public Cons(){}
-
-	public Expression call(Expression exp){
-		Pair list = (Pair) exp;
-		Expression a = list.getCar();
-		Expression b = ((Pair)list.getCdr()).getCar();
-		return new Pair(a,b);
-	}
-}
-
 class Core{
 	Core(){}
 
 	static Environment getEnv(){
 		Environment env = new Environment();
-
-		JavaFunction quote = new JavaFunction(){
-			Expression call(Expression exp){
-				return exp;
-			}
-		};
-		env.add(new SymbolVal("quote"), quote);
 
 		JavaFunction cons = new JavaFunction(){
 			Expression call(Expression exp){
@@ -864,6 +859,128 @@ class Core{
 		};
 		env.add(new SymbolVal("cons"),cons);
 
+		JavaFunction list = new JavaFunction(){
+			Expression call(Expression exp){
+				return exp;
+			}
+		};
+		env.add(new SymbolVal("list"),list);
+
+		JavaFunction car = new JavaFunction(){
+			Expression call(Expression exp){
+				try{
+					if(exp.isPair()){
+						Pair list = (Pair) exp;
+						Expression a = list.getCar();
+						return a;
+					}else{
+						throw new Exception("Car expects a list as argument.");
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		env.add(new SymbolVal("car"),car);
+
+		JavaFunction cdr = new JavaFunction(){
+			Expression call(Expression exp){
+				try{
+					if(exp.isPair()){
+						Pair list = (Pair) exp;
+						Expression a = list.getCdr();
+						return a;
+					}else{
+						throw new Exception("Car expects a list as argument.");
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		env.add(new SymbolVal("cdr"),cdr);
+
+		JavaFunction isPair = new JavaFunction(){
+			Expression call(Expression exp){
+				try{
+					if(exp.isPair()){
+						return new BooleanVal(true);
+					}else{
+						return new BooleanVal(false);
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		env.add(new SymbolVal("pair?"),isPair);
+
+		JavaFunction isSymbol = new JavaFunction(){
+			Expression call(Expression exp){
+				try{
+					if(exp.isSymbol()){
+						return new BooleanVal(true);
+					}else{
+						return new BooleanVal(false);
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		env.add(new SymbolVal("symbol?"),isSymbol);
+
+		JavaFunction isAtom = new JavaFunction(){
+			Expression call(Expression exp){
+				try{
+					if(exp.isAtom()){
+						return new BooleanVal(true);
+					}else{
+						return new BooleanVal(false);
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		env.add(new SymbolVal("atom?"),isAtom);
+
+		JavaFunction isNumber = new JavaFunction(){
+			Expression call(Expression exp){
+				try{
+					if(exp.isNumber()){
+						return new BooleanVal(true);
+					}else{
+						return new BooleanVal(false);
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		env.add(new SymbolVal("number?"),isNumber);
+
+		JavaFunction isList = new JavaFunction(){
+			Expression call(Expression exp){
+				try{
+					if(exp.isList()){
+						return new BooleanVal(true);
+					}else{
+						return new BooleanVal(false);
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		env.add(new SymbolVal("list?"),isList);
 
 		return env;
 	}
@@ -889,6 +1006,17 @@ class MathLib{
 		};
 
 		env.add(new SymbolVal("+"),add);
+
+		JavaFunction abs = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				return new NumberVal(a.getVal().abs());
+			}
+		};
+
+		env.add(new SymbolVal("abs"),abs);
+
 
 		return env;
 	}
