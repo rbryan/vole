@@ -113,6 +113,18 @@ abstract class Expression{
 		return false;
 	}
 
+	boolean isContinuation(){
+		if(this instanceof Continuation)
+			return true;
+		return false;
+	}
+
+	static boolean isContinuation(Expression e){
+		if(e instanceof Continuation)
+			return true;
+		return false;
+	}
+
 	boolean isNil(){
 		if(this.isPair()){
 			Expression car = ((Pair) this).getCar();
@@ -234,6 +246,20 @@ class Pair extends Expression{
 
 }
 
+class Continuation extends Atom{
+	Expression returnValue;
+
+	Continuation(){}
+
+	Expression getReturnValue(){
+		return returnValue;
+	}
+
+	void setReturnValue(Expression newReturnValue){
+		this.returnValue = newReturnValue;
+	}
+}
+
 
 //Interface for adding functions written in java
 abstract class ProcedureVal extends Atom{
@@ -350,6 +376,10 @@ class Evaluator{
 	}
 
 	Expression apply(Expression fn, Expression args){
+		return apply(fn, args, this.env);
+	}
+
+	Expression apply(Expression fn, Expression args, Environment env){
 		try{
 			Parser printer = new Parser();
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
@@ -364,24 +394,30 @@ class Evaluator{
 
 			if(fn.isAtom()){
 				if(fn.isSymbol())
-					return apply(env.lookUp((SymbolVal)fn),args);
+					return apply(env.lookUp((SymbolVal)fn),args,env);
 				else if(fn.isLambda()){
 					Lambda lambda = (Lambda) fn;
 					Environment oldEnvironment = env;
 					env = lambda.getEvalEnvironment(((Pair)args).getCar(),env);
-					Expression result = eval(lambda.getExp());
+					Expression result = eval(lambda.getExp(),env);
 					env = oldEnvironment;
 					return result;
 				}else if(fn.isJavaFunction()){
 					System.out.println("Apply called a javafunction.");
 					JavaFunction jfunc = (JavaFunction) fn;
 					return jfunc.call(args);
+				}else if(fn.isContinuation()){
+					System.out.println("Apply called on continuation.");
+					//We should probably do some checks to make
+					//sure args is a list that has elements. meh.
+					((Continuation) fn).setReturnValue(eval(((Pair)args).getCar(),env));
+					return fn;
 				}else{
 					throw new Exception("Apply can't apply that type.");
 				}
 
 			}else{
-				return apply(eval(fn),args);
+				return apply(eval(fn),args,env);
 			}
 		}catch(Exception e){
 			e.printStackTrace();
@@ -442,11 +478,22 @@ class Evaluator{
 							}else{
 								throw new Exception("define expects at least two arguments.");
 							}
+						}else if(sym.getIdentifier().equals("call-cc")){
+							Continuation cont = new Continuation();
+							//We should probably make sure that cdr is a
+							//pair first. meh.
+							Expression cadr = ((Pair) cdr).getCar();
+							Expression result = eval(new Pair(cadr, new Pair(cont, new Pair(null,null))),env);
+							if(result.isContinuation() &&
+								result == cont)
+								return ((Continuation) result).getReturnValue();
+							else
+								throw new Exception("\nA wise vole once said:\nIn goes continuation\n should not come back changed.\n");
 						}
 					}
-					return apply(car,evlis(cdr));
+					return apply(car,evlis(cdr,env),env);
 				}else{
-					return apply(eval(car),evlis(cdr));
+					return apply(eval(car,env),evlis(cdr,env),env);
 					
 				}
 
@@ -463,7 +510,7 @@ class Evaluator{
 
 	}
 
-	Expression evlis(Expression list){
+	Expression evlis(Expression list, Environment env){
 		if(list.isAtom())
 			return list;
 		else{
@@ -471,8 +518,12 @@ class Evaluator{
 			if(listPair.isNil())
 				return listPair;
 			else
-				return new Pair(eval(listPair.getCar()),evlis(listPair.getCdr()));
+				return new Pair(eval(listPair.getCar(),env),evlis(listPair.getCdr(),env));
 		}
+	}
+
+	Expression evlis(Expression list){
+		return evlis(list,this.env);
 	}
 
 	static boolean eq(Expression a, Expression b){
@@ -599,6 +650,10 @@ class Parser{
 		out.write("<JavaFunction Proc>");
 	}
 
+	static void printContinuation(Expression expr, Writer out) throws Exception{
+		out.write("<Continuation>");
+	}
+
 	static void printExpression(Expression expr, Writer out){
 		try{
 			if(expr == null)
@@ -631,6 +686,10 @@ class Parser{
 			}
 			if(expr.isJavaFunction()){
 				printJavaFunction(expr,out);
+				return;
+			}
+			if(expr.isContinuation()){
+				printContinuation(expr, out);
 				return;
 			}
 		}catch(Exception e){
