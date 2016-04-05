@@ -207,6 +207,18 @@ class BooleanVal extends Atom{
 	}
 }
 
+class Thunk extends Atom{
+	ProcedureVal fn;
+	Expression arg;
+	Environment env;
+
+	Thunk(ProcedureVal fn, Expression arg){
+		this.fn = fn;
+		this.arg = arg;
+	}
+
+}
+
 class Pair extends Expression{
 	Expression car;
 	Expression cdr;
@@ -362,27 +374,19 @@ class Evaluator{
 			}
 			System.out.println();
 
-			if(fn.isAtom()){
-				if(fn.isSymbol())
-					return apply(env.lookUp((SymbolVal)fn),args);
-				else if(fn.isLambda()){
-					Lambda lambda = (Lambda) fn;
-					Environment oldEnvironment = env;
-					env = lambda.getEvalEnvironment(((Pair)args).getCar(),env);
-					Expression result = eval(lambda.getExp());
-					env = oldEnvironment;
-					return result;
-				}else if(fn.isJavaFunction()){
-					System.out.println("Apply called a javafunction.");
-					JavaFunction jfunc = (JavaFunction) fn;
-					return jfunc.call(args);
-				}else{
-					throw new Exception("Apply can't apply that type.");
-				}
-
+			if(fn.isLambda()){
+				Lambda lambda = (Lambda) fn;
+				Environment lambdaEnv = lambda.getEvalEnvironment(((Pair)args).getCar(),env);
+				Expression result = eval(lambda.getExp(),lambdaEnv);
+				return result;
+			}else if(fn.isJavaFunction()){
+				System.out.println("Apply called a javafunction.");
+				JavaFunction jfunc = (JavaFunction) fn;
+				return jfunc.call(args);
 			}else{
-				throw new Exception("Wrong type to apply.");
+				throw new Exception("Apply can't apply that type.");
 			}
+
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -390,7 +394,7 @@ class Evaluator{
 	}
 
 	Expression eval(Expression exp){
-		return eval(exp,env);
+		return eval(exp, this.env);
 	}
 
 
@@ -434,7 +438,7 @@ class Evaluator{
 									if(currentValue != null){
 										throw new Exception("Symbol ".concat(name).concat(" is already defined."));
 									}		
-									env.add((SymbolVal) cadr, caddr);
+									env.add((SymbolVal) cadr, eval(caddr,env));
 									return null;
 								}else{
 									throw new Exception("define expects a symbol as the first argument.");
@@ -442,15 +446,15 @@ class Evaluator{
 							}else{
 								throw new Exception("define expects at least two arguments.");
 							}
+						}else{
+							return apply(eval(car),evlis(cdr,env));
 						}
 					}
-					return apply(car,evlis(cdr));
-				}else{
-					return apply(eval(car),evlis(cdr));
-					
+					return apply(car,evlis(cdr,env));
 				}
 
-
+				return apply(eval(car),evlis(cdr,env));
+					
 			}
 
 		}catch(Exception e){
@@ -464,6 +468,10 @@ class Evaluator{
 	}
 
 	Expression evlis(Expression list){
+		return evlis(list,this.env);
+	}
+
+	Expression evlis(Expression list, Environment env){
 		if(list.isAtom())
 			return list;
 		else{
@@ -471,7 +479,7 @@ class Evaluator{
 			if(listPair.isNil())
 				return listPair;
 			else
-				return new Pair(eval(listPair.getCar()),evlis(listPair.getCdr()));
+				return new Pair(eval(listPair.getCar(),env),evlis(listPair.getCdr(),env));
 		}
 	}
 
