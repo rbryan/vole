@@ -381,7 +381,7 @@ class Evaluator{
 				}
 
 			}else{
-				return apply(eval(fn),args);
+				throw new Exception("Wrong type to apply.");
 			}
 		}catch(Exception e){
 			e.printStackTrace();
