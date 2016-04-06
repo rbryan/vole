@@ -101,6 +101,18 @@ abstract class Expression{
 		return false;
 	}
 
+	boolean isThunk(){
+		if(this instanceof Thunk)
+			return true;
+		return false;
+	}
+
+	static boolean isThunk(Expression e){
+		if(e instanceof Thunk)
+			return true;
+		return false;
+	}
+
 	boolean isJavaFunction(){
 		if(this instanceof JavaFunction)
 			return true;
@@ -208,13 +220,20 @@ class BooleanVal extends Atom{
 }
 
 class Thunk extends Atom{
-	ProcedureVal fn;
-	Expression arg;
+	Expression exp;
 	Environment env;
 
-	Thunk(ProcedureVal fn, Expression arg){
-		this.fn = fn;
-		this.arg = arg;
+	Thunk(Expression exp, Environment env){
+		this.exp = exp;
+		this.env = env;
+	}
+
+	Expression getExp(){
+		return exp;
+	}
+
+	Environment getEnv(){
+		return env;
 	}
 
 }
@@ -361,7 +380,31 @@ class Evaluator{
 		this.env = def;
 	}
 
+	Expression trampoline(Expression thunk){
+
+			Parser printer = new Parser();
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+		Expression result = thunk;
+		while(result != null && result.isThunk()){
+			System.out.print("Boing!: ");
+			printer.printExpression(((Thunk)result).getExp(),writer);
+			try{
+				writer.flush();
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			System.out.println();
+
+			result = eval_tramp(((Thunk)result).getExp(),((Thunk)result).getEnv());
+		}
+		return result;
+	}
+
 	Expression apply(Expression fn, Expression args){
+		return trampoline(apply_tramp(fn,args));
+	}
+
+	Expression apply_tramp(Expression fn, Expression args){
 		try{
 			Parser printer = new Parser();
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
@@ -377,7 +420,7 @@ class Evaluator{
 			if(fn.isLambda()){
 				Lambda lambda = (Lambda) fn;
 				Environment lambdaEnv = lambda.getEvalEnvironment(((Pair)args).getCar(),env);
-				Expression result = eval(lambda.getExp(),lambdaEnv);
+				Expression result = new Thunk(lambda.getExp(),lambdaEnv);
 				return result;
 			}else if(fn.isJavaFunction()){
 				System.out.println("Apply called a javafunction.");
@@ -394,11 +437,15 @@ class Evaluator{
 	}
 
 	Expression eval(Expression exp){
-		return eval(exp, this.env);
+		return trampoline(eval_tramp(exp, this.env));
+	}
+
+	Expression eval(Expression exp, Environment env){
+		return trampoline(eval_tramp(exp,env));
 	}
 
 
-	Expression eval(Expression exp, Environment env){
+	Expression eval_tramp(Expression exp, Environment env){
 		try{
 			Parser printer = new Parser();
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
@@ -447,13 +494,15 @@ class Evaluator{
 								throw new Exception("define expects at least two arguments.");
 							}
 						}else{
-							return apply(eval(car),evlis(cdr,env));
+							//(symbol args)
+							return apply_tramp(eval(car,env),evlis(cdr,env));
 						}
 					}
-					return apply(car,evlis(cdr,env));
+					//(<fn> args)
+					return apply_tramp(car,evlis(cdr,env));
 				}
-
-				return apply(eval(car),evlis(cdr,env));
+				//((stuff) args ...)
+				return apply_tramp(trampoline(eval_tramp(car,env)),evlis(cdr,env));
 					
 			}
 
