@@ -469,12 +469,14 @@ class Evaluator{
 			Expression cdr = expList.getCdr();
 			if(car.isAtom()){
 				if(car.isSymbol()){
-					//add a check here to see if the symbol is defined.
-					//If it is, skip the rest of this conditional so that
-					//the user can redefine if, lambda, quote, and define
 					SymbolVal sym = (SymbolVal) car;
 
-					if(sym.getIdentifier().equals("if")){
+					Expression val = env.lookUp(sym);
+
+					if(val != null)
+						return apply_tramp(val,evlis(cdr,env));
+
+					else if(sym.getIdentifier().equals("if")){
 						Pair list = (Pair) cdr;
 						//It's okay to introduce a new stack frame here because
 						//there is no possible way this is a tail call
@@ -514,7 +516,7 @@ class Evaluator{
 
 					}else{
 						//(symbol args)
-						return apply_tramp(eval(car,env),evlis(cdr,env));
+						return apply_tramp(val,evlis(cdr,env));
 					}
 				}
 				//(<fn> args)
