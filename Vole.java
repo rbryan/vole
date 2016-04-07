@@ -371,29 +371,34 @@ class Environment{
 
 class Evaluator{
 	Environment env;
+	boolean debug;
 
 	Evaluator(){
 		env = new Environment();
+		this.debug=false;
 	}
 
 	Evaluator(Environment def){
 		this.env = def;
+		this.debug=false;
 	}
 
 	Expression trampoline(Expression thunk){
 
-			Parser printer = new Parser();
-			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 		Expression result = thunk;
 		while(result != null && result.isThunk()){
-			System.out.print("Boing!: ");
-			printer.printExpression(((Thunk)result).getExp(),writer);
-			try{
-				writer.flush();
-			}catch(Exception e){
-				e.printStackTrace();
+			if(this.debug){
+				Parser printer = new Parser();
+				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+				System.out.print("Boing!: ");
+				printer.printExpression(((Thunk)result).getExp(),writer);
+				try{
+					writer.flush();
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				System.out.println();
 			}
-			System.out.println();
 
 			result = eval_tramp(((Thunk)result).getExp(),((Thunk)result).getEnv());
 		}
@@ -406,16 +411,18 @@ class Evaluator{
 
 	Expression apply_tramp(Expression fn, Expression args){
 		try{
-			Parser printer = new Parser();
-			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
-			System.out.print("apply() called on:\t");
-			printer.printExpression(new Pair(fn,args),writer);
-			try{
-				writer.flush();
-			}catch(Exception e){
-				e.printStackTrace();
+			if(this.debug){
+				Parser printer = new Parser();
+				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+				System.out.print("apply() called on:\t");
+				printer.printExpression(new Pair(fn,args),writer);
+				try{
+					writer.flush();
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				System.out.println();
 			}
-			System.out.println();
 
 			if(fn.isLambda()){
 				Lambda lambda = (Lambda) fn;
@@ -423,7 +430,6 @@ class Evaluator{
 				Expression result = new Thunk(lambda.getExp(),lambdaEnv);
 				return result;
 			}else if(fn.isJavaFunction()){
-				System.out.println("Apply called a javafunction.");
 				JavaFunction jfunc = (JavaFunction) fn;
 				return jfunc.call(args);
 			}else{
@@ -447,16 +453,18 @@ class Evaluator{
 
 	Expression eval_tramp(Expression exp, Environment env){
 		try{
-			Parser printer = new Parser();
-			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
-			System.out.print("eval() called on:\t");
-			printer.printExpression(exp,writer);
-			try{
-				writer.flush();
-			}catch(Exception e){
-				e.printStackTrace();
+			if(this.debug){
+				Parser printer = new Parser();
+				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+				System.out.print("eval() called on:\t");
+				printer.printExpression(exp,writer);
+				try{
+					writer.flush();
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				System.out.println();
 			}
-			System.out.println();
 			
 			if(exp.isAtom()){
 				if(exp.isSymbol()){
@@ -509,6 +517,10 @@ class Evaluator{
 							}else{
 								throw new Exception("define expects at least two arguments.");
 							}
+						}else if(sym.getIdentifier().equals("toggle-debug")){
+							this.debug = this.debug ? false : true;
+							return new BooleanVal(this.debug);
+
 						}else{
 							//(symbol args)
 							return apply_tramp(eval(car,env),evlis(cdr,env));
@@ -526,6 +538,7 @@ class Evaluator{
 			e.printStackTrace();
 		}
 
+		//We should be throwing an exception here
 		System.out.println("Eval couldn't figure out what to do.");
 
 		return null;
