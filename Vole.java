@@ -470,6 +470,9 @@ class Evaluator{
 				Expression cdr = expList.getCdr();
 				if(car.isAtom()){
 					if(car.isSymbol()){
+						//add a check here to see if the symbol is defined.
+						//If it is, skip the rest of this conditional so that
+						//the user can redefine lambda quote and define
 						SymbolVal sym = (SymbolVal) car;
 						if(sym.getIdentifier().equals("lambda"))
 							return new Lambda(cdr,env);
@@ -1112,6 +1115,18 @@ class MathLib{
 		};
 
 		env.add(new SymbolVal("+"),add);
+
+		JavaFunction subtract = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+				return new NumberVal(a.getVal().subtract(b.getVal()));
+			}
+		};
+
+		env.add(new SymbolVal("-"),subtract);
 
 		JavaFunction multiply = new JavaFunction(){
 			Expression call(Expression exp){
