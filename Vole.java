@@ -504,6 +504,7 @@ class Evaluator{
 
 					Expression val = env.lookUp(sym);
 
+					//(defined-symbol args)
 					if(val != null)
 						return apply_tramp(val,evlis(cdr,env));
 
@@ -546,8 +547,7 @@ class Evaluator{
 						return new BooleanVal(this.debug);
 
 					}else{
-						//(symbol args)
-						return apply_tramp(val,evlis(cdr,env));
+						throw new Exception("Undefined symbol: ".concat(car.toString()));
 					}
 				}
 				//(<fn> args)
