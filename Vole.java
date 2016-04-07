@@ -1,5 +1,6 @@
 import java.io.Reader;
 import java.io.Writer;
+import java.io.StringWriter;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -359,11 +360,8 @@ class Environment{
 		this.map.putAll(env.getMap());
 	}
 
-	Expression lookUp(SymbolVal val){
+	Expression lookUp(SymbolVal val) throws Exception{
 		Expression result = map.get(val);
-		if(result == null)
-			System.out.println(val.getIdentifier() + " is undefined.");
-
 		return result;
 	}
 
@@ -383,7 +381,7 @@ class Evaluator{
 		this.debug=false;
 	}
 
-	Expression trampoline(Expression thunk){
+	Expression trampoline(Expression thunk) throws Exception{
 
 		Expression result = thunk;
 		while(result != null && result.isThunk()){
@@ -392,11 +390,7 @@ class Evaluator{
 				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 				System.out.print("Boing!: ");
 				printer.printExpression(((Thunk)result).getExp(),writer);
-				try{
-					writer.flush();
-				}catch(Exception e){
-					e.printStackTrace();
-				}
+				writer.flush();
 				System.out.println();
 			}
 
@@ -405,151 +399,141 @@ class Evaluator{
 		return result;
 	}
 
-	Expression apply(Expression fn, Expression args){
+	Expression apply(Expression fn, Expression args) throws Exception{
 		return trampoline(apply_tramp(fn,args));
 	}
 
-	Expression apply_tramp(Expression fn, Expression args){
-		try{
-			if(this.debug){
-				Parser printer = new Parser();
-				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
-				System.out.print("apply() called on:\t");
-				printer.printExpression(new Pair(fn,args),writer);
-				try{
-					writer.flush();
-				}catch(Exception e){
-					e.printStackTrace();
-				}
-				System.out.println();
-			}
-
-			if(fn.isLambda()){
-				Lambda lambda = (Lambda) fn;
-				Environment lambdaEnv = lambda.getEvalEnvironment(((Pair)args).getCar(),env);
-				Expression result = new Thunk(lambda.getExp(),lambdaEnv);
-				return result;
-			}else if(fn.isJavaFunction()){
-				JavaFunction jfunc = (JavaFunction) fn;
-				return jfunc.call(args);
-			}else{
-				throw new Exception("Apply can't apply that type.");
-			}
-
-		}catch(Exception e){
-			e.printStackTrace();
+	Expression apply_tramp(Expression fn, Expression args) throws Exception {
+		if(this.debug){
+			Parser printer = new Parser();
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+			System.out.print("apply() called on:\t");
+			printer.printExpression(new Pair(fn,args),writer);
+			writer.flush();
+			System.out.println();
 		}
-		return null;
+
+		if(fn.isLambda()){
+			Lambda lambda = (Lambda) fn;
+			Environment lambdaEnv = lambda.getEvalEnvironment(((Pair)args).getCar(),env);
+			Expression result = new Thunk(lambda.getExp(),lambdaEnv);
+			return result;
+		}else if(fn.isJavaFunction()){
+			JavaFunction jfunc = (JavaFunction) fn;
+			return jfunc.call(args);
+		}else{
+			StringWriter error = new StringWriter();
+			Parser printer = new Parser();
+			error.append("Apply could not apply function ");
+			printer.printExpression(fn,error);
+			error.append(" to args ");
+			printer.printExpression(args,error);
+			throw new Exception(error.toString());
+		}
+		
 	}
 
-	Expression eval(Expression exp){
+	Expression eval(Expression exp) throws Exception{
 		return trampoline(eval_tramp(exp, this.env));
 	}
 
-	Expression eval(Expression exp, Environment env){
+	Expression eval(Expression exp, Environment env) throws Exception{
 		return trampoline(eval_tramp(exp,env));
 	}
 
 
-	Expression eval_tramp(Expression exp, Environment env){
-		try{
-			if(this.debug){
-				Parser printer = new Parser();
-				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
-				System.out.print("eval() called on:\t");
-				printer.printExpression(exp,writer);
-				try{
-					writer.flush();
-				}catch(Exception e){
-					e.printStackTrace();
-				}
-				System.out.println();
+	Expression eval_tramp(Expression exp, Environment env) throws Exception{
+
+		if(this.debug){
+			Parser printer = new Parser();
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+			System.out.print("eval() called on:\t");
+			printer.printExpression(exp,writer);
+			writer.flush();
+			System.out.println();
+		}
+		
+		if(exp.isAtom()){
+			if(exp.isSymbol()){
+				Expression val = env.lookUp((SymbolVal) exp);
+				if(val != null)
+					return val;
+				else
+					throw new Exception("Symbol ".concat(((SymbolVal) exp).getIdentifier()).concat(" is undefined."));
+			}else{
+				return exp;
 			}
-			
-			if(exp.isAtom()){
-				if(exp.isSymbol()){
-					return env.lookUp((SymbolVal) exp);
-				}else{
-					return exp;
-				}
-			}else if(exp.isList()){
-				Pair expList = (Pair) exp;
-				Expression car = expList.getCar();
-				Expression cdr = expList.getCdr();
-				if(car.isAtom()){
-					if(car.isSymbol()){
-						//add a check here to see if the symbol is defined.
-						//If it is, skip the rest of this conditional so that
-						//the user can redefine if, lambda, quote, and define
-						SymbolVal sym = (SymbolVal) car;
+		}else if(exp.isList()){
+			Pair expList = (Pair) exp;
+			Expression car = expList.getCar();
+			Expression cdr = expList.getCdr();
+			if(car.isAtom()){
+				if(car.isSymbol()){
+					//add a check here to see if the symbol is defined.
+					//If it is, skip the rest of this conditional so that
+					//the user can redefine if, lambda, quote, and define
+					SymbolVal sym = (SymbolVal) car;
 
-						if(sym.getIdentifier().equals("if")){
-							Pair list = (Pair) cdr;
-							//It's okay to introduce a new stack frame here because
-							//there is no possible way this is a tail call
-							Expression a = trampoline(eval_tramp(list.getCar(),env));
-							Expression resultThunkExp;
-							if(a.isBoolean() && ((BooleanVal)a).getVal() == true)
-								resultThunkExp = ((Pair)list.getCdr()).getCar();
-							else
-								resultThunkExp = ((Pair)((Pair) list.getCdr()).getCdr()).getCar();
-							return new Thunk(resultThunkExp,env);
+					if(sym.getIdentifier().equals("if")){
+						Pair list = (Pair) cdr;
+						//It's okay to introduce a new stack frame here because
+						//there is no possible way this is a tail call
+						Expression a = trampoline(eval_tramp(list.getCar(),env));
+						Expression resultThunkExp;
+						if(a.isBoolean() && ((BooleanVal)a).getVal() == true)
+							resultThunkExp = ((Pair)list.getCdr()).getCar();
+						else
+							resultThunkExp = ((Pair)((Pair) list.getCdr()).getCdr()).getCar();
+						return new Thunk(resultThunkExp,env);
 
-						}else if(sym.getIdentifier().equals("lambda"))
-							return new Lambda(cdr,env);
-						else if(sym.getIdentifier().equals("quote"))
-							return ((Pair) cdr).getCar();
-						else if(sym.getIdentifier().equals("define")){
-							if(cdr.isList()){
-								Expression cadr = ((Pair) cdr).getCar();
-								Expression caddr =((Pair) ((Pair) cdr).getCdr()).getCar();
-								if(cadr.isSymbol()){
-									String name = ((SymbolVal) cadr).getIdentifier();
-									Expression currentValue = env.lookUp((SymbolVal) cadr);
-									if(currentValue != null){
-										throw new Exception("Symbol ".concat(name).concat(" is already defined."));
-									}		
-									env.add((SymbolVal) cadr, eval(caddr,env));
-									return null;
-								}else{
-									throw new Exception("define expects a symbol as the first argument.");
-								}
+					}else if(sym.getIdentifier().equals("lambda"))
+						return new Lambda(cdr,env);
+					else if(sym.getIdentifier().equals("quote"))
+						return ((Pair) cdr).getCar();
+					else if(sym.getIdentifier().equals("define")){
+						if(cdr.isList()){
+							Expression cadr = ((Pair) cdr).getCar();
+							Expression caddr =((Pair) ((Pair) cdr).getCdr()).getCar();
+							if(cadr.isSymbol()){
+								String name = ((SymbolVal) cadr).getIdentifier();
+								Expression currentValue = env.lookUp((SymbolVal) cadr);
+								if(currentValue != null){
+									throw new Exception("Symbol ".concat(name).concat(" is already defined."));
+								}		
+								env.add((SymbolVal) cadr, eval(caddr,env));
+								return null;
 							}else{
-								throw new Exception("define expects at least two arguments.");
+								throw new Exception("define expects a symbol as the first argument.");
 							}
-						}else if(sym.getIdentifier().equals("toggle-debug")){
-							this.debug = this.debug ? false : true;
-							return new BooleanVal(this.debug);
-
 						}else{
-							//(symbol args)
-							return apply_tramp(eval(car,env),evlis(cdr,env));
+							throw new Exception("define expects at least two arguments.");
 						}
-					}
-					//(<fn> args)
-					return apply_tramp(car,evlis(cdr,env));
-				}
-				//((stuff) args ...)
-				return apply_tramp(trampoline(eval_tramp(car,env)),evlis(cdr,env));
-					
-			}
+					}else if(sym.getIdentifier().equals("toggle-debug")){
+						this.debug = this.debug ? false : true;
+						return new BooleanVal(this.debug);
 
-		}catch(Exception e){
-			e.printStackTrace();
+					}else{
+						//(symbol args)
+						return apply_tramp(eval(car,env),evlis(cdr,env));
+					}
+				}
+				//(<fn> args)
+				return apply_tramp(car,evlis(cdr,env));
+			}
+			//((stuff) args ...)
+			return apply_tramp(trampoline(eval_tramp(car,env)),evlis(cdr,env));
+				
 		}
 
-		//We should be throwing an exception here
-		System.out.println("Eval couldn't figure out what to do.");
-
-		return null;
+		throw new Exception("Eval couldn't couldn't figure out how to evaluate that statement. Maybe you should rethink it.");
 
 	}
 
-	Expression evlis(Expression list){
+	Expression evlis(Expression list) throws Exception{
 		return evlis(list,this.env);
 	}
 
-	Expression evlis(Expression list, Environment env){
+	Expression evlis(Expression list, Environment env) throws Exception{
 		if(list.isAtom())
 			return list;
 		else{
@@ -561,6 +545,7 @@ class Evaluator{
 		}
 	}
 
+	//This needs to be moved to the core library
 	static boolean eq(Expression a, Expression b){
 		if(	a instanceof NumberVal &&
 			b instanceof NumberVal){
