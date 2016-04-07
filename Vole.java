@@ -547,43 +547,6 @@ class Evaluator{
 		}
 	}
 
-	//This needs to be moved to the core library
-	static boolean eq(Expression a, Expression b){
-		if(	a instanceof NumberVal &&
-			b instanceof NumberVal){
-			if(	((NumberVal) a).getVal().equals(((NumberVal) b).getVal()))
-				return true;
-			else
-				return false;
-		}
-		if(	a instanceof SymbolVal &&
-			b instanceof SymbolVal){
-			if(((SymbolVal) a).getIdentifier().equals(((SymbolVal) b).getIdentifier()))
-				return true;
-			else
-				return false;
-		}
-		if(	a instanceof BooleanVal &&
-			b instanceof BooleanVal){
-			if(((BooleanVal) a).getVal() == ((BooleanVal) b).getVal())
-				return true;
-			else
-				return false;
-		}
-		if(	a instanceof Pair &&
-			b instanceof Pair){
-			if(	((Pair) a).isNil() &&
-				((Pair) b).isNil())
-				return true;
-			else
-				return false;
-
-		}
-		return false;
-
-	}
-
-
 }
 
 class Parser{
@@ -942,6 +905,41 @@ class Core{
 			}
 		};
 		env.add(new SymbolVal("eq?"),eq);
+
+		JavaFunction eqv = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair list = (Pair) exp;
+				Expression a = list.getCar();
+				Expression b = ((Pair)list.getCdr()).getCar();
+
+				if(	a.isNumber() &&
+					b.isNumber()){
+					if(	((NumberVal) a).getVal().equals(((NumberVal) b).getVal()))
+						return new BooleanVal(true);
+					else
+						return new BooleanVal(false);
+				}
+				if(	a.isSymbol() &&
+					b.isSymbol()){
+					if(((SymbolVal) a).getIdentifier().equals(((SymbolVal) b).getIdentifier()))
+						return new BooleanVal(true);
+					else
+						return new BooleanVal(false);
+				}
+				if(	a.isBoolean() &&
+					b.isBoolean()){
+					if(((BooleanVal) a).getVal() == ((BooleanVal) b).getVal())
+						return new BooleanVal(true);
+					else
+						return new BooleanVal(false);
+				}
+				return new BooleanVal(false);
+
+			}
+		};
+		env.add(new SymbolVal("eqv?"),eqv);
+
+
 
 		JavaFunction cons = new JavaFunction(){
 			Expression call(Expression exp){
