@@ -1141,6 +1141,42 @@ class MathLib{
 
 		env.add(new SymbolVal("*"),multiply);
 
+		JavaFunction divide = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+				return new NumberVal(a.getVal().divide(b.getVal()));
+			}
+		};
+
+		env.add(new SymbolVal("/"),divide);
+
+		JavaFunction and = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+				return new NumberVal(a.getVal().and(b.getVal()));
+			}
+		};
+
+		env.add(new SymbolVal("bitwise-and"),and);
+
+		JavaFunction divideWithRemainder = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+				BigInteger[] result = a.getVal().divideAndRemainder(b.getVal());
+				return new Pair(new NumberVal(result[0]), new NumberVal(result[1]));
+			}
+		};
+
+		env.add(new SymbolVal("divide-with-remainder"),divideWithRemainder);
+
 	//Comparisons
 
 		JavaFunction gt = new JavaFunction(){
