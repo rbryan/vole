@@ -24,20 +24,8 @@ abstract class Expression{
 		return false;
 	}
 	
-	static boolean isAtom(Expression e){
-		if(e instanceof Atom)
-			return true;
-		return false;
-	}
-
 	boolean isNumber(){
 		if(this instanceof NumberVal)
-			return true;
-		return false;
-	}
-
-	static boolean isNumber(Expression e){
-		if(e instanceof NumberVal)
 			return true;
 		return false;
 	}
@@ -48,20 +36,8 @@ abstract class Expression{
 		return false;
 	}
 
-	static boolean isSymbol(Expression e){
-		if(e instanceof SymbolVal)
-			return true;
-		return false;
-	}
-
 	boolean isBoolean(){
 		if(this instanceof BooleanVal)
-			return true;
-		return false;
-	}
-
-	static boolean isBoolean(Expression e){
-		if(e instanceof BooleanVal)
 			return true;
 		return false;
 	}
@@ -96,20 +72,8 @@ abstract class Expression{
 		return false;
 	}
 
-	static boolean isLambda(Expression e){
-		if(e instanceof Lambda)
-			return true;
-		return false;
-	}
-
 	boolean isThunk(){
 		if(this instanceof Thunk)
-			return true;
-		return false;
-	}
-
-	static boolean isThunk(Expression e){
-		if(e instanceof Thunk)
 			return true;
 		return false;
 	}
@@ -120,26 +84,10 @@ abstract class Expression{
 		return false;
 	}
 
-	static boolean isJavaFunction(Expression e){
-		if(e instanceof JavaFunction)
-			return true;
-		return false;
-	}
-
 	boolean isNil(){
 		if(this.isPair()){
 			Expression car = ((Pair) this).getCar();
 			Expression cdr = ((Pair) this).getCdr();
-			if(car == null && cdr == null)
-				return true;
-		}
-		return false;
-	}
-
-	static boolean isNil(Expression e){
-		if(e.isPair()){
-			Expression car = ((Pair) e).getCar();
-			Expression cdr = ((Pair) e).getCdr();
 			if(car == null && cdr == null)
 				return true;
 		}
@@ -155,19 +103,17 @@ abstract class Expression{
 		return false;
 	}
 
-	static boolean isList(Expression e){
-		if(e.isPair()){
-			Expression cdr = ((Pair) e).getCdr();
-			if(cdr instanceof Pair)
-				return true;
-		}
-		return false;
-	}
+	@Override
+	abstract public boolean equals(Object e);
+
+	@Override
+	abstract public String toString();
 
 }
 
 abstract class Atom extends Expression{
 	Atom(){}
+
 }
 
 class NumberVal extends Atom{
@@ -178,6 +124,17 @@ class NumberVal extends Atom{
 
 	BigInteger getVal(){
 		return val;
+	}
+
+	public String toString(){
+		return val.toString();
+	}
+
+	public boolean equals(Object e){
+		if(e instanceof NumberVal && ((NumberVal)e).getVal().equals(this.val))
+			return true;
+		else
+			return false;
 	}
 }
 
@@ -206,6 +163,10 @@ class SymbolVal extends Atom{
 	public int hashCode() {
 		return identifier.hashCode();
 	}
+
+	public String toString(){
+		return identifier;
+	}
 }
 
 class BooleanVal extends Atom{
@@ -217,6 +178,17 @@ class BooleanVal extends Atom{
 
 	boolean getVal(){
 		return val;
+	}
+
+	public String toString(){
+		return val ? "#t" : "#f";
+	}
+
+	public boolean equals(Object e){
+		if(e instanceof BooleanVal && ((BooleanVal) e).getVal() == val)
+			return true;
+		else
+			return false;
 	}
 }
 
@@ -235,6 +207,17 @@ class Thunk extends Atom{
 
 	Environment getEnv(){
 		return env;
+	}
+
+	public String toString(){
+		return "<Thunk exp=".concat(exp.toString());
+	}
+
+	public boolean equals(Object e){
+		if(e.equals(this))
+			return true;
+		else
+			return false;
 	}
 
 }
@@ -264,18 +247,57 @@ class Pair extends Expression{
 		car = exp;
 	}
 
+	public String toString(){
+		if(this.isNil())
+			return "(quote ())";
+		else
+			return "(cons ".concat(car.toString()).concat(" ").concat(cdr.toString()).concat(")");
+	}
+
+	public boolean equals(Object e){
+		if(	e instanceof Pair &&
+			((Pair) e).isNil() &&
+			this.isNil())
+			return true;
+
+		else if(	e instanceof Pair &&
+			((Pair) e).getCar().equals(this.car) &&
+			((Pair) e).getCdr().equals(this.cdr)){
+
+			return true;
+		}
+		return false;
+	}
 }
 
 
 //Interface for adding functions written in java
 abstract class ProcedureVal extends Atom{
 	ProcedureVal(){}
+
+	public boolean equals(Object e){
+		if(e.equals(e))
+			return true;
+		else
+			return false;
+	}
 }
 
 //look at using anonymous classes for these
 abstract class JavaFunction extends ProcedureVal{
 	JavaFunction(){}
-	abstract Expression call(Expression args);
+	abstract Expression call(Expression args) throws Exception;
+
+	public String toString(){
+		return "<java-function>";
+	}
+	
+	public boolean equals(Object e){
+		if(e.equals(this))
+			return true;
+		else
+			return false;
+	}
 }
 
 
@@ -333,7 +355,16 @@ class Lambda extends ProcedureVal {
 		return newEnv;
 	}
 
+	public String toString(){
+		return "<lambda exp=".concat(exp.toString()).concat(">");
+	}
 
+	public boolean equals(Object e){
+		if(e.equals(this))
+			return true;
+		else
+			return false;
+	}
 }
 
 
@@ -593,82 +624,20 @@ class Parser{
 		}
 	}
 
-	static void printPair(Expression expr, Writer out) throws Exception{
-		Pair p = (Pair) expr;
-		if(p.isNil()){
-			out.write("(quote ())");
-		}else{
-			out.write("(cons ");
-			if(p.getCar() != null){
-				printExpression(p.getCar(),out);
-				out.write(" ");
-			}
-			if(p.getCdr() != null)
-				printExpression(p.getCdr(),out);
-			out.write(")");
-		}
-	}
-
-	static void printBoolean(Expression expr, Writer out) throws Exception{
-		BooleanVal val = (BooleanVal) expr;
-		if(val.getVal())
-			out.write("#t");
-		else
-			out.write("#f");
-	}
-
-	static void printNumber(Expression expr, Writer out) throws Exception{
-		NumberVal val = (NumberVal) expr;
-		out.write(val.getVal().toString());
-	}
-
-	static void printSymbol(Expression expr, Writer out) throws Exception{
-		SymbolVal val = (SymbolVal) expr;
-		out.write(val.getIdentifier());
-	}
-
-	static void printLambda(Expression expr, Writer out) throws Exception{
-		out.write("<Lambda Proc>");
-	}
-
-	static void printJavaFunction(Expression expr, Writer out) throws Exception{
-		out.write("<JavaFunction Proc>");
-	}
-
 	static void printExpression(Expression expr, Writer out){
 		try{
 			if(expr == null)
 				return;
-			if(expr.isList()){
+			else if(expr.isList()){
 				out.write("(");
 				printList(expr,out);
 				out.write(")");
 				return;
+			}else{
+				out.write(expr.toString());
 			}
-			if(expr.isPair()){
-				printPair(expr,out);
-				return;
-			}
-			if(expr.isBoolean()){
-				printBoolean(expr,out);
-				return;
-			}
-			if(expr.isNumber()){
-				printNumber(expr,out);
-				return;
-			}
-			if(expr.isSymbol()){
-				printSymbol(expr,out);
-				return;
-			}
-			if(expr.isLambda()){
-				printLambda(expr,out);
-				return;
-			}
-			if(expr.isJavaFunction()){
-				printJavaFunction(expr,out);
-				return;
-			}
+
+
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -939,7 +908,15 @@ class Core{
 		};
 		env.add(new SymbolVal("eqv?"),eqv);
 
-
+		JavaFunction equals = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair list = (Pair) exp;
+				Expression a = list.getCar();
+				Expression b = ((Pair)list.getCdr()).getCar();
+				return new BooleanVal(a.equals(b));
+			}
+		};
+		env.add(new SymbolVal("equals?"),equals);
 
 		JavaFunction cons = new JavaFunction(){
 			Expression call(Expression exp){
