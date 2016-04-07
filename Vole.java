@@ -911,6 +911,34 @@ class Core{
 	static Environment getEnv(){
 		Environment env = new Environment();
 
+		JavaFunction ifConditional = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair list = (Pair) exp;
+				Expression a = list.getCar();
+				if(a.isBoolean() && ((BooleanVal)a).getVal() == true)
+					return ((Pair)list.getCdr()).getCar();
+				else
+					return ((Pair)((Pair) list.getCdr()).getCdr()).getCar();
+			}
+		};
+		env.add(new SymbolVal("if"),ifConditional);
+
+		JavaFunction eq = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair list = (Pair) exp;
+				Expression a = list.getCar();
+				Expression b = ((Pair)list.getCdr()).getCar();
+				//hopefully this does what I think it does.
+				//We need to cast 'a to an object so that we don't use
+				//the atoms equals() function which will actually check values.
+				if(((Object) a).equals(b))
+					return new BooleanVal(true);
+				else
+					return new BooleanVal(false);
+			}
+		};
+		env.add(new SymbolVal("eq?"),eq);
+
 		JavaFunction cons = new JavaFunction(){
 			Expression call(Expression exp){
 				Pair list = (Pair) exp;
@@ -996,6 +1024,22 @@ class Core{
 		};
 		env.add(new SymbolVal("symbol?"),isSymbol);
 
+		JavaFunction isBoolean = new JavaFunction(){
+			Expression call(Expression exp){
+				try{
+					if(exp.isBoolean()){
+						return new BooleanVal(true);
+					}else{
+						return new BooleanVal(false);
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		env.add(new SymbolVal("boolean?"),isBoolean);
+
 		JavaFunction isAtom = new JavaFunction(){
 			Expression call(Expression exp){
 				try{
@@ -1080,6 +1124,68 @@ class MathLib{
 		};
 
 		env.add(new SymbolVal("*"),multiply);
+
+	//Comparisons
+
+		JavaFunction gt = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+				return new BooleanVal(a.getVal().compareTo(b.getVal()) > 0);
+			}
+		};
+
+		env.add(new SymbolVal(">"),gt);
+
+		JavaFunction lt = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+				return new BooleanVal(a.getVal().compareTo(b.getVal()) < 0);
+			}
+		};
+
+		env.add(new SymbolVal("<"),lt);
+
+		JavaFunction eq = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+				return new BooleanVal(a.getVal().compareTo(b.getVal()) == 0);
+			}
+		};
+
+		env.add(new SymbolVal("="),eq);
+
+		JavaFunction gteq = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+				return new BooleanVal(a.getVal().compareTo(b.getVal()) >= 0);
+			}
+		};
+
+		env.add(new SymbolVal(">="),gteq);
+
+		JavaFunction lteq = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+				return new BooleanVal(a.getVal().compareTo(b.getVal()) <= 0);
+			}
+		};
+
+		env.add(new SymbolVal("<="),lteq);
 
 		JavaFunction abs = new JavaFunction(){
 			Expression call(Expression exp){
