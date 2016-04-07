@@ -292,7 +292,7 @@ class Lambda extends ProcedureVal {
 	Lambda(Expression exp, Environment env){
 		try{
 			closure = new Environment(env);
-			if(exp.isPair()){
+			if(exp.isList()){
 				Expression car = ((Pair) exp).getCar();
 				Expression cdr = ((Pair) exp).getCdr();
 				if(car.isSymbol()){
@@ -1068,6 +1068,18 @@ class MathLib{
 		};
 
 		env.add(new SymbolVal("+"),add);
+
+		JavaFunction multiply = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				NumberVal a = (NumberVal) (expPair.getCar());
+				NumberVal b = (NumberVal) ((Pair) expPair.getCdr()).getCar();
+
+				return new NumberVal(a.getVal().multiply(b.getVal()));
+			}
+		};
+
+		env.add(new SymbolVal("*"),multiply);
 
 		JavaFunction abs = new JavaFunction(){
 			Expression call(Expression exp){
