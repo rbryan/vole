@@ -472,9 +472,22 @@ class Evaluator{
 					if(car.isSymbol()){
 						//add a check here to see if the symbol is defined.
 						//If it is, skip the rest of this conditional so that
-						//the user can redefine lambda quote and define
+						//the user can redefine if, lambda, quote, and define
 						SymbolVal sym = (SymbolVal) car;
-						if(sym.getIdentifier().equals("lambda"))
+
+						if(sym.getIdentifier().equals("if")){
+							Pair list = (Pair) cdr;
+							//It's okay to introduce a new stack frame here because
+							//there is no possible way this is a tail call
+							Expression a = trampoline(eval_tramp(list.getCar(),env));
+							Expression resultThunkExp;
+							if(a.isBoolean() && ((BooleanVal)a).getVal() == true)
+								resultThunkExp = ((Pair)list.getCdr()).getCar();
+							else
+								resultThunkExp = ((Pair)((Pair) list.getCdr()).getCdr()).getCar();
+							return new Thunk(resultThunkExp,env);
+
+						}else if(sym.getIdentifier().equals("lambda"))
 							return new Lambda(cdr,env);
 						else if(sym.getIdentifier().equals("quote"))
 							return ((Pair) cdr).getCar();
@@ -914,18 +927,6 @@ class Core{
 	static Environment getEnv(){
 		Environment env = new Environment();
 
-		JavaFunction ifConditional = new JavaFunction(){
-			Expression call(Expression exp){
-				Pair list = (Pair) exp;
-				Expression a = list.getCar();
-				if(a.isBoolean() && ((BooleanVal)a).getVal() == true)
-					return ((Pair)list.getCdr()).getCar();
-				else
-					return ((Pair)((Pair) list.getCdr()).getCdr()).getCar();
-			}
-		};
-		env.add(new SymbolVal("if"),ifConditional);
-
 		JavaFunction eq = new JavaFunction(){
 			Expression call(Expression exp){
 				Pair list = (Pair) exp;
@@ -962,12 +963,13 @@ class Core{
 		JavaFunction car = new JavaFunction(){
 			Expression call(Expression exp){
 				try{
+					//get the first argument
+					exp = ((Pair)exp).getCar();
 					if(exp.isPair()){
-						Pair list = (Pair) exp;
-						Expression a = list.getCar();
+						Expression a = ((Pair) exp).getCar();
 						return a;
 					}else{
-						throw new Exception("Car expects a list as argument.");
+						throw new Exception("Car expects a pair as argument.");
 					}
 				}catch(Exception e){
 					e.printStackTrace();
@@ -980,9 +982,10 @@ class Core{
 		JavaFunction cdr = new JavaFunction(){
 			Expression call(Expression exp){
 				try{
+					//get the first argument
+					exp = ((Pair) exp).getCar();
 					if(exp.isPair()){
-						Pair list = (Pair) exp;
-						Expression a = list.getCdr();
+						Expression a = ((Pair) exp).getCdr();
 						return a;
 					}else{
 						throw new Exception("Car expects a list as argument.");
