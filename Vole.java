@@ -30,6 +30,12 @@ abstract class Expression{
 		return false;
 	}
 
+	boolean isString(){
+		if(this instanceof StringVal)
+			return true;
+		return false;
+	}
+
 	boolean isSymbol(){
 		if(this instanceof SymbolVal)
 			return true;
@@ -48,20 +54,8 @@ abstract class Expression{
 		return false;
 	}
 
-	static boolean isPair(Expression e){
-		if(e instanceof Pair)
-			return true;
-		return false;
-	}
-
 	boolean isProcedure(){
 		if(this instanceof ProcedureVal)
-			return true;
-		return false;
-	}
-
-	static boolean isProcedure(Expression e){
-		if(e instanceof ProcedureVal)
 			return true;
 		return false;
 	}
@@ -118,6 +112,7 @@ abstract class Atom extends Expression{
 
 class NumberVal extends Atom{
 	BigInteger val;
+
 	NumberVal(BigInteger val){
 		this.val = val;
 	}
@@ -136,6 +131,30 @@ class NumberVal extends Atom{
 		else
 			return false;
 	}
+}
+
+class StringVal extends Atom{
+	String val;
+
+	StringVal(String str){
+		this.val = str;
+	}
+
+	String getVal(){
+		return val;
+	}
+
+	public String toString(){
+		return "\"".concat(val).concat("\"");
+	}
+
+	public boolean equals(Object e){
+		if(e instanceof StringVal && ((StringVal) e).getVal().equals(this.val))
+			return true;
+		else
+			return false;
+	}
+
 }
 
 class SymbolVal extends Atom{
@@ -712,6 +731,31 @@ class Parser{
 
 	}
 
+	StringVal parseString(){
+		StringBuilder builder = new StringBuilder();
+		int c = 0;
+
+		try{
+			//eat the initial '"'
+			input.read();
+			c = peek();
+			while( 	c != '"' &&
+				(short) c != -1 ){
+				
+				builder.append((char) c);
+				input.read();
+				c = peek();
+			}
+			//eat the end '"'
+			input.read();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+
+		return new StringVal(builder.toString());
+		
+	}
+
 	void parseComment(){
 		Scanner scanner = new Scanner(input);
 		scanner.useDelimiter("[\n]");
@@ -754,6 +798,9 @@ class Parser{
 					
 					else if(Character.isDigit(c))
 						exp = parseNumber();
+
+					else if(c == '"')
+						exp = parseString();
 
 					else if(Character.isWhitespace(c)){
 						input.read();
@@ -821,6 +868,10 @@ class Parser{
 
 				else if(Character.isDigit(c)){
 					return parseNumber();
+				}
+				
+				else if(c == '"'){
+					return parseString();
 				}
 				
 				else if(c == '('){
