@@ -1027,6 +1027,7 @@ class Core{
 		JavaFunction isPair = new JavaFunction(){
 			Expression call(Expression exp){
 				try{
+					exp = ((Pair) exp).getCar();
 					if(exp.isPair()){
 						return new BooleanVal(true);
 					}else{
@@ -1043,6 +1044,7 @@ class Core{
 		JavaFunction isSymbol = new JavaFunction(){
 			Expression call(Expression exp){
 				try{
+					exp = ((Pair) exp).getCar();
 					if(exp.isSymbol()){
 						return new BooleanVal(true);
 					}else{
@@ -1059,6 +1061,7 @@ class Core{
 		JavaFunction isBoolean = new JavaFunction(){
 			Expression call(Expression exp){
 				try{
+					exp = ((Pair) exp).getCar();
 					if(exp.isBoolean()){
 						return new BooleanVal(true);
 					}else{
@@ -1075,6 +1078,7 @@ class Core{
 		JavaFunction isAtom = new JavaFunction(){
 			Expression call(Expression exp){
 				try{
+					exp = ((Pair) exp).getCar();
 					if(exp.isAtom()){
 						return new BooleanVal(true);
 					}else{
@@ -1091,6 +1095,7 @@ class Core{
 		JavaFunction isNumber = new JavaFunction(){
 			Expression call(Expression exp){
 				try{
+					exp = ((Pair) exp).getCar();
 					if(exp.isNumber()){
 						return new BooleanVal(true);
 					}else{
@@ -1104,9 +1109,27 @@ class Core{
 		};
 		env.add(new SymbolVal("number?"),isNumber);
 
+		JavaFunction isString = new JavaFunction(){
+			Expression call(Expression exp){
+				try{
+					exp = ((Pair) exp).getCar();
+					if(exp.isString()){
+						return new BooleanVal(true);
+					}else{
+						return new BooleanVal(false);
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		env.add(new SymbolVal("string?"),isString);
+
 		JavaFunction isList = new JavaFunction(){
 			Expression call(Expression exp){
 				try{
+					exp = ((Pair) exp).getCar();
 					if(exp.isList()){
 						return new BooleanVal(true);
 					}else{
