@@ -387,7 +387,7 @@ class Lambda extends ProcedureVal {
 }
 
 
-class Environment{
+class Environment extends Atom{
 	Map<SymbolVal,Expression> map;
 
 	Environment(){
@@ -415,27 +415,29 @@ class Environment{
 		return result;
 	}
 
+	public String toString(){
+		return "<environment>";
+	}
+
+	public boolean equals(Object e){
+		if(e.equals(this))
+			return true;
+		else
+			return false;
+	}
+
 }
 
 class Evaluator{
-	Environment env;
-	boolean debug;
+	static boolean debug = false;
 
-	Evaluator(){
-		env = new Environment();
-		this.debug=false;
-	}
+	Evaluator(){}
 
-	Evaluator(Environment def){
-		this.env = def;
-		this.debug=false;
-	}
-
-	Expression trampoline(Expression thunk) throws Exception{
+	public static Expression trampoline(Expression thunk) throws Exception{
 
 		Expression result = thunk;
 		while(result != null && result.isThunk()){
-			if(this.debug){
+			if(debug){
 				Parser printer = new Parser();
 				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 				System.out.print("Boing!: ");
@@ -449,12 +451,12 @@ class Evaluator{
 		return result;
 	}
 
-	Expression apply(Expression fn, Expression args) throws Exception{
-		return trampoline(apply_tramp(fn,args));
+	public static Expression apply(Expression fn, Expression args, Environment env) throws Exception{
+		return trampoline(apply_tramp(fn,args,env));
 	}
 
-	Expression apply_tramp(Expression fn, Expression args) throws Exception {
-		if(this.debug){
+	public static Expression apply_tramp(Expression fn, Expression args, Environment env) throws Exception {
+		if(debug){
 			Parser printer = new Parser();
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 			System.out.print("apply() called on:\t");
@@ -483,18 +485,14 @@ class Evaluator{
 		
 	}
 
-	Expression eval(Expression exp) throws Exception{
-		return trampoline(eval_tramp(exp, this.env));
-	}
-
-	Expression eval(Expression exp, Environment env) throws Exception{
+	public static Expression eval(Expression exp, Environment env) throws Exception{
 		return trampoline(eval_tramp(exp,env));
 	}
 
 
-	Expression eval_tramp(Expression exp, Environment env) throws Exception{
+	public static Expression eval_tramp(Expression exp, Environment env) throws Exception{
 
-		if(this.debug){
+		if(debug){
 			Parser printer = new Parser();
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 			System.out.print("eval() called on:\t");
@@ -525,7 +523,7 @@ class Evaluator{
 
 					//(defined-symbol args)
 					if(val != null)
-						return apply_tramp(val,evlis(cdr,env));
+						return apply_tramp(val,evlis(cdr,env),env);
 
 					else if(sym.getIdentifier().equals("if")){
 						Pair list = (Pair) cdr;
@@ -561,19 +559,21 @@ class Evaluator{
 						}else{
 							throw new Exception("define expects at least two arguments.");
 						}
+					}else if(sym.getIdentifier().equals("current-environment")){
+						return env;
 					}else if(sym.getIdentifier().equals("toggle-debug")){
-						this.debug = this.debug ? false : true;
-						return new BooleanVal(this.debug);
+						debug = debug ? false : true;
+						return new BooleanVal(debug);
 
 					}else{
 						throw new Exception("Undefined symbol: ".concat(car.toString()));
 					}
 				}
 				//(<fn> args)
-				return apply_tramp(car,evlis(cdr,env));
+				return apply_tramp(car,evlis(cdr,env), env);
 			}
 			//((stuff) args ...)
-			return apply_tramp(trampoline(eval_tramp(car,env)),evlis(cdr,env));
+			return apply_tramp(trampoline(eval_tramp(car,env)),evlis(cdr,env), env);
 				
 		}
 
@@ -581,11 +581,7 @@ class Evaluator{
 
 	}
 
-	Expression evlis(Expression list) throws Exception{
-		return evlis(list,this.env);
-	}
-
-	Expression evlis(Expression list, Environment env) throws Exception{
+	public static Expression evlis(Expression list, Environment env) throws Exception{
 		if(list.isAtom())
 			return list;
 		else{
@@ -909,6 +905,18 @@ class Core{
 
 	static Environment getEnv(){
 		Environment env = new Environment();
+
+		//eval just returns a thunk to bounce off
+		//of the trampoline.
+		JavaFunction eval = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair list = (Pair) exp;
+				Expression a = list.getCar();
+				Expression b = ((Pair)list.getCdr()).getCar();
+				return new Thunk(a,(Environment) b);
+			}
+		};
+		env.add(new SymbolVal("eval"),eval);
 
 		JavaFunction eq = new JavaFunction(){
 			Expression call(Expression exp){
@@ -1316,7 +1324,6 @@ public class Vole{
 		Environment env = new Environment();
 		env.concat(Core.getEnv());
 		env.concat(MathLib.getEnv());
-		Evaluator evaluator = new Evaluator(env);
 
 		while(true){
 			try{
@@ -1325,7 +1332,7 @@ public class Vole{
 				String input = inputScanner.nextLine();
 				parser.setInput(new StringReader(input));
 				Expression exp = parser.parseSexp();
-				Expression result = evaluator.eval(exp);
+				Expression result = Evaluator.eval(exp,env);
 				parser.printExpression(result, writer);
 				writer.write("\n");
 				writer.flush();
