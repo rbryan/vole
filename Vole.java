@@ -629,6 +629,15 @@ class Evaluator{
 						}
 					}else if(sym.getIdentifier().equals("current-environment")){
 						return env;
+					}else if(sym.getIdentifier().equals("load")){
+						String filename;
+						Expression cadr = ((Pair) cdr).getCar();
+						if(cadr.isString())
+							filename = ((StringVal) cadr).getVal();
+						else
+							throw new Exception("(load _) expects a filename as the first argument.");
+						load(filename,env);
+						return null;
 					}else if(sym.getIdentifier().equals("toggle-debug")){
 						debug = debug ? false : true;
 						return new BooleanVal(debug);
@@ -659,6 +668,18 @@ class Evaluator{
 			else
 				return new Pair(eval(listPair.getCar(),env),evlis(listPair.getCdr(),env));
 		}
+	}
+
+	public static void load(String filename, Environment env) throws Exception{
+
+		Reader input = new BufferedReader(new FileReader(filename));
+		
+		Expression exp = Parser.parseSexp(input);
+
+		while(!exp.isEof()){
+			eval(exp,env);
+		}
+
 	}
 
 }
@@ -1504,6 +1525,8 @@ class IOLib{
 		env.add(new SymbolVal("write"),write);
 		
 		return env;
+
+
 	}
 }
 
@@ -1513,7 +1536,7 @@ class CoreLispLib{
 	public static Environment getEnv(){
 		Environment env = new Environment();
 
-		env.concat(CoreLib.getEnv());
+		env.concat(Core.getEnv());
 		env.concat(MathLib.getEnv());
 		env.concat(IOLib.getEnv());
 		
