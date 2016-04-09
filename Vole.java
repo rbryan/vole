@@ -1488,7 +1488,7 @@ class IOLib{
 						Writer output = ((Port) b).getOutput();
 						
 						//Java really should have gotos.
-						//This is rediculous.
+						//This is ridiculous.
 						if(output == null)
 							break;
 						
@@ -1507,6 +1507,20 @@ class IOLib{
 	}
 }
 
+class CoreLispLib{
+	CoreLispLib(){}
+
+	public static Environment getEnv(){
+		Environment env = new Environment();
+
+		env.concat(CoreLib.getEnv());
+		env.concat(MathLib.getEnv());
+		env.concat(IOLib.getEnv());
+		
+		return env;
+	}
+}
+
 public class Vole{ 
 
 	public static void main(String[] args){
@@ -1514,9 +1528,7 @@ public class Vole{
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 		Scanner inputScanner = new Scanner(System.in);
 		Environment env = new Environment();
-		env.concat(Core.getEnv());
-		env.concat(MathLib.getEnv());
-		env.concat(IOLib.getEnv());
+		env.concat(CoreLispLib.getEnv());
 
 		while(true){
 			try{
