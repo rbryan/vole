@@ -1,5 +1,7 @@
 import java.io.Reader;
 import java.io.Writer;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.StringWriter;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
@@ -94,6 +96,12 @@ abstract class Expression{
 			if(cdr instanceof Pair)
 				return true;
 		}
+		return false;
+	}
+
+	boolean isPort(){
+		if(this instanceof Port)
+			return true;
 		return false;
 	}
 
@@ -376,6 +384,44 @@ class Lambda extends ProcedureVal {
 
 	public String toString(){
 		return "<lambda exp=".concat(exp.toString()).concat(">");
+	}
+
+	public boolean equals(Object e){
+		if(e.equals(this))
+			return true;
+		else
+			return false;
+	}
+}
+
+class Port extends Atom{
+	//Input and output are from the
+	//users perspective. A program
+	//will read in input and write out
+	//output.
+	Reader input;
+	Writer output;
+
+	Port(){
+		input = null;
+		output = null;
+	}
+
+	Port(Reader input, Writer output){
+		this.input = input;
+		this.output = output;
+	}
+	
+	Reader getInput(){
+		return input;
+	}
+
+	Writer getOutput(){
+		return output;
+	}
+
+	public String toString(){
+		return "<port>";
 	}
 
 	public boolean equals(Object e){
@@ -1314,6 +1360,44 @@ class MathLib{
 
 }
 
+class PortsLib{
+	PortsLib(){}
+
+	public static Environment getEnv(){
+		Environment env = new Environment();
+
+		JavaFunction isPort = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				Expression a = expPair.getCar();
+				if(a.isPort())
+					return new BooleanVal(true);
+				else
+					return new BooleanVal(false);
+			}
+		};
+
+		env.add(new SymbolVal("port?"),isPort);
+
+		JavaFunction openInputFilePort = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair expPair = (Pair) exp;
+				Expression a = expPair.getCar();
+				if(a.isString())
+					return new Port(new FileReader(((StringVal) a).getVal()),null);
+				else
+					throw new Exception("(open-input-file _) expects a filename as an argument.");
+			}
+		};
+
+		env.add(new SymbolVal("open-input-file"),openInputFilePort);
+
+
+		
+		return env;
+	}
+}
+
 public class Vole{ 
 
 	public static void main(String[] args){
@@ -1324,6 +1408,7 @@ public class Vole{
 		Environment env = new Environment();
 		env.concat(Core.getEnv());
 		env.concat(MathLib.getEnv());
+		env.concat(PortsLib.getEnv());
 
 		while(true){
 			try{
