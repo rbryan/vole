@@ -676,8 +676,9 @@ class Evaluator{
 		
 		Expression exp = Parser.parseSexp(input);
 
-		while(!exp.isEof()){
+		while(exp != null){
 			eval(exp,env);
+			exp = Parser.parseSexp(input);
 		}
 
 	}
