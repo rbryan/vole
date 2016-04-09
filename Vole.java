@@ -105,6 +105,12 @@ abstract class Expression{
 		return false;
 	}
 
+	boolean isEof(){
+		if(this instanceof EofVal)
+			return true;
+		return false;
+	}
+
 	@Override
 	abstract public boolean equals(Object e);
 
@@ -431,6 +437,21 @@ class Port extends Atom{
 
 	public boolean equals(Object e){
 		if(e.equals(this))
+			return true;
+		else
+			return false;
+	}
+}
+
+class EofVal extends Atom{
+	EofVal(){}
+
+	public String toString(){
+		return "<eof>";
+	}
+
+	public boolean equals(Object e){
+		if(e instanceof EofVal)
 			return true;
 		else
 			return false;
@@ -1372,6 +1393,19 @@ class PortsLib{
 	public static Environment getEnv(){
 		Environment env = new Environment();
 
+		JavaFunction isEof = new JavaFunction(){
+			Expression call(Expression exp){
+				Pair expPair = (Pair) exp;
+				Expression a = expPair.getCar();
+				if(a.isEof())
+					return new BooleanVal(true);
+				else
+					return new BooleanVal(false);
+			}
+		};
+
+		env.add(new SymbolVal("eof?"),isEof);
+
 		JavaFunction isPort = new JavaFunction(){
 			Expression call(Expression exp){
 				Pair expPair = (Pair) exp;
@@ -1446,7 +1480,11 @@ class PortsLib{
 							break;
 
 						Parser parser = new Parser(input);
-						return parser.parseSexp();
+						Expression parsedExp = parser.parseSexp();
+						if(parsedExp != null)
+							return parsedExp;
+						else
+							return new EofVal();
 					}
 					break;
 				}
@@ -1480,9 +1518,6 @@ class PortsLib{
 		};
 
 		env.add(new SymbolVal("write"),write);
-
-
-
 		
 		return env;
 	}
