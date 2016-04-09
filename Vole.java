@@ -408,7 +408,12 @@ class Port extends Atom{
 	}
 
 	Port(Reader input, Writer output){
-		this.input = input;
+		//Input must be buffered so that peek() in parseSexp() will work.
+		//If it is not (read) will not work. Output is left unbuffered
+		//for now I don't see a need to buffer it. If it's buffered it
+		//might lead to a bunch of annoying things like having to flush
+		//the buffer to get stuff to write.
+		this.input = input==null ? null : new BufferedReader(input);
 		this.output = output;
 	}
 	
@@ -687,9 +692,10 @@ class Parser{
 
 	static void printExpression(Expression expr, Writer out){
 		try{
-			if(expr == null)
+			if(expr == null){
+				out.write("<unspecified>");
 				return;
-			else if(expr.isList()){
+			}else if(expr.isList()){
 				out.write("(");
 				printList(expr,out);
 				out.write(")");
@@ -1391,6 +1397,90 @@ class PortsLib{
 		};
 
 		env.add(new SymbolVal("open-input-file"),openInputFilePort);
+
+		JavaFunction openOutputFilePort = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair expPair = (Pair) exp;
+				Expression a = expPair.getCar();
+				if(a.isString())
+					return new Port(null, new FileWriter(((StringVal) a).getVal()));
+				else
+					throw new Exception("(open-output-file _) expects a filename as an argument.");
+			}
+		};
+
+		env.add(new SymbolVal("open-output-file"),openOutputFilePort);
+
+		JavaFunction closePort = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair expPair = (Pair) exp;
+				Expression a = expPair.getCar();
+				if(a.isPort()){
+					Reader input = ((Port) a).getInput();
+					Writer output = ((Port) a).getOutput();
+
+					if(input != null)
+						input.close();
+					if(output != null)
+						output.close();
+
+					return null;
+				}else
+					throw new Exception("(close-port _) expects a port as an argument.");
+			}
+		};
+
+		env.add(new SymbolVal("close-port"),closePort);
+
+		JavaFunction read = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair expPair = (Pair) exp;
+				Expression a = expPair.getCar();
+				while(true){
+					if(a.isPort()){
+						Reader input = ((Port) a).getInput();
+						
+						//Java really should have gotos.
+						//This is rediculous.
+						if(input == null)
+							break;
+
+						Parser parser = new Parser(input);
+						return parser.parseSexp();
+					}
+					break;
+				}
+				throw new Exception("(read _) expects an open input port as an argument.");
+			}
+		};
+
+		env.add(new SymbolVal("read"),read);
+
+		JavaFunction write = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair expPair = (Pair) exp;
+				Expression a = expPair.getCar();
+				Expression b = ((Pair) expPair.getCdr()).getCar();
+				while(true){
+					if(b.isPort()){
+						Writer output = ((Port) b).getOutput();
+						
+						//Java really should have gotos.
+						//This is rediculous.
+						if(output == null)
+							break;
+						
+						output.write(a.toString());
+						return null;
+					}
+					break;
+				}
+				throw new Exception("(write _ _) expects an expression and an open output port as arguments.");
+			}
+		};
+
+		env.add(new SymbolVal("write"),write);
+
 
 
 		
