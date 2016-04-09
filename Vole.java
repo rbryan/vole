@@ -510,10 +510,9 @@ class Evaluator{
 		Expression result = thunk;
 		while(result != null && result.isThunk()){
 			if(debug){
-				Parser printer = new Parser();
 				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 				System.out.print("Boing!: ");
-				printer.printExpression(((Thunk)result).getExp(),writer);
+				Printer.printExpression(((Thunk)result).getExp(),writer);
 				writer.flush();
 				System.out.println();
 			}
@@ -529,10 +528,9 @@ class Evaluator{
 
 	public static Expression apply_tramp(Expression fn, Expression args, Environment env) throws Exception {
 		if(debug){
-			Parser printer = new Parser();
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 			System.out.print("apply() called on:\t");
-			printer.printExpression(new Pair(fn,args),writer);
+			Printer.printExpression(new Pair(fn,args),writer);
 			writer.flush();
 			System.out.println();
 		}
@@ -547,11 +545,10 @@ class Evaluator{
 			return jfunc.call(args);
 		}else{
 			StringWriter error = new StringWriter();
-			Parser printer = new Parser();
 			error.append("Apply could not apply function ");
-			printer.printExpression(fn,error);
+			Printer.printExpression(fn,error);
 			error.append(" to args ");
-			printer.printExpression(args,error);
+			Printer.printExpression(args,error);
 			throw new Exception(error.toString());
 		}
 		
@@ -565,10 +562,9 @@ class Evaluator{
 	public static Expression eval_tramp(Expression exp, Environment env) throws Exception{
 
 		if(debug){
-			Parser printer = new Parser();
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 			System.out.print("eval() called on:\t");
-			printer.printExpression(exp,writer);
+			Printer.printExpression(exp,writer);
 			writer.flush();
 			System.out.println();
 		}
@@ -667,38 +663,11 @@ class Evaluator{
 
 }
 
-class Parser{
-	Reader input;
+class Printer{
+	
+	Printer(){}
 
-	Parser(){
-		this.input = new BufferedReader(new InputStreamReader(System.in));
-	}
-
-	Parser(Reader input){
-		this.input = input;
-	}
-
-	void setInput(Reader input){
-		this.input = input;
-	}
-
-	Reader getInput(){
-		return input;
-	}
-
-	int peek(){
-		int c = 0;
-		try{
-			input.mark(1);
-			c = (char) input.read();
-			input.reset();
-		}catch(Exception e){
-			e.printStackTrace();
-		}
-		return c;
-	}
-
-	static void printList(Expression expr, Writer out) throws Exception{
+	public static void printList(Expression expr, Writer out) throws Exception{
 		if(expr.isList()){
 			Pair p = (Pair) expr;
 			printExpression(p.getCar(),out);
@@ -711,7 +680,7 @@ class Parser{
 		}
 	}
 
-	static void printExpression(Expression expr, Writer out){
+	public static void printExpression(Expression expr, Writer out){
 		try{
 			if(expr == null){
 				out.write("<unspecified>");
@@ -730,8 +699,24 @@ class Parser{
 			e.printStackTrace();
 		}
 	}
+}
 
-	BooleanVal parseBoolean(){
+class Parser{
+	Parser(){}
+
+	static int peek(Reader input){
+		int c = 0;
+		try{
+			input.mark(1);
+			c = (char) input.read();
+			input.reset();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return c;
+	}
+
+	public static BooleanVal parseBoolean(Reader input){
 		try{
 			input.read();
 			int c = input.read();
@@ -748,12 +733,12 @@ class Parser{
 		return null;
 	}
 
-	NumberVal parseNumber(){
+	public static NumberVal parseNumber(Reader input){
 		StringBuilder builder = new StringBuilder();
 		int c = 0;
 
 		try{
-			c = peek();
+			c = peek(input);
 			while( 	c != '#' &&
 				c != '(' &&
 				c != ')' &&
@@ -764,7 +749,7 @@ class Parser{
 				
 				builder.append((char) c);
 				input.read();
-				c = peek();
+				c = peek(input);
 			}
 		}catch(Exception e){
 			e.printStackTrace();
@@ -775,12 +760,12 @@ class Parser{
 		return new NumberVal(s.nextBigInteger());
 	}
 
-	SymbolVal parseSymbol(){
+	public static SymbolVal parseSymbol(Reader input){
 		StringBuilder builder = new StringBuilder();
 		int c = 0;
 
 		try{
-			c = peek();
+			c = peek(input);
 			while( 	c != '#' &&
 				c != '(' &&
 				c != ')' &&
@@ -790,7 +775,7 @@ class Parser{
 				
 				builder.append((char) c);
 				input.read();
-				c = peek();
+				c = peek(input);
 			}
 		}catch(Exception e){
 			e.printStackTrace();
@@ -800,20 +785,20 @@ class Parser{
 
 	}
 
-	StringVal parseString(){
+	public static StringVal parseString(Reader input){
 		StringBuilder builder = new StringBuilder();
 		int c = 0;
 
 		try{
 			//eat the initial '"'
 			input.read();
-			c = peek();
+			c = peek(input);
 			while( 	c != '"' &&
 				(short) c != -1 ){
 				
 				builder.append((char) c);
 				input.read();
-				c = peek();
+				c = peek(input);
 			}
 			//eat the end '"'
 			input.read();
@@ -825,26 +810,26 @@ class Parser{
 		
 	}
 
-	void parseComment(){
+	public static void parseComment(Reader input){
 		Scanner scanner = new Scanner(input);
 		scanner.useDelimiter("[\n]");
 		String s = scanner.next(";.*");
 		return;
 	}
 
-	Pair parseList(){
+	public static Pair parseList(Reader input){
 		int c;
 		Pair head = null;
 		Pair tail = null;
 
 		try{
-			c = peek();
+			c = peek(input);
 
 			if(c == '('){
 				//eat the '('
 				input.read();
 				
-				c = peek();
+				c = peek(input);
 
 				if((short) c == -1)
 					throw new Exception("Unmatched '(' in file.");
@@ -854,26 +839,26 @@ class Parser{
 					Expression exp = null;
 
 					if(c == '(')
-						exp = parseList();
+						exp = parseList(input);
 
 					else if(c == '#')
-						exp = parseBoolean();
+						exp = parseBoolean(input);
 
 					else if(c == ';'){
-						parseComment();
-						c = peek();
+						parseComment(input);
+						c = peek(input);
 						continue;
 					}
 					
 					else if(Character.isDigit(c))
-						exp = parseNumber();
+						exp = parseNumber(input);
 
 					else if(c == '"')
-						exp = parseString();
+						exp = parseString(input);
 
 					else if(Character.isWhitespace(c)){
 						input.read();
-						c = peek();
+						c = peek(input);
 						continue;
 					}
 
@@ -882,7 +867,7 @@ class Parser{
 
 					//If it's none of those things it must be a symbol
 					else 
-						exp = parseSymbol();
+						exp = parseSymbol(input);
 					
 					if(head == null){
 						head = new Pair(exp,null);
@@ -893,7 +878,7 @@ class Parser{
 						tail = newTail;
 					}
 
-					c = peek();
+					c = peek(input);
 
 				}
 
@@ -917,39 +902,39 @@ class Parser{
 
 	}
 
-	Expression parseSexp(){
+	public static Expression parseSexp(Reader input){
 
 		int c;
 
 		try{
-			c = peek();
+			c = peek(input);
 
 			while((short) c != -1){
 				if(Character.isWhitespace(c)){
 					input.read();
-					c = peek();
+					c = peek(input);
 					continue;
 				}
 
 				else if(c == '#'){
-					return parseBoolean();
+					return parseBoolean(input);
 				}
 
 				else if(Character.isDigit(c)){
-					return parseNumber();
+					return parseNumber(input);
 				}
 				
 				else if(c == '"'){
-					return parseString();
+					return parseString(input);
 				}
 				
 				else if(c == '('){
-					return parseList();
+					return parseList(input);
 				}
 
 				else if(c == ';'){
-					parseComment();
-					c = peek();
+					parseComment(input);
+					c = peek(input);
 					continue;
 				}
 				else if(c == ')'){
@@ -957,7 +942,7 @@ class Parser{
 				}
 
 				else
-					return parseSymbol();
+					return parseSymbol(input);
 				
 
 			}
@@ -1387,8 +1372,8 @@ class MathLib{
 
 }
 
-class PortsLib{
-	PortsLib(){}
+class IOLib{
+	IOLib(){}
 
 	public static Environment getEnv(){
 		Environment env = new Environment();
@@ -1479,8 +1464,7 @@ class PortsLib{
 						if(input == null)
 							break;
 
-						Parser parser = new Parser(input);
-						Expression parsedExp = parser.parseSexp();
+						Expression parsedExp = Parser.parseSexp(input);
 						if(parsedExp != null)
 							return parsedExp;
 						else
@@ -1508,7 +1492,7 @@ class PortsLib{
 						if(output == null)
 							break;
 						
-						output.write(a.toString());
+						Printer.printExpression(a,output);
 						return null;
 					}
 					break;
@@ -1529,21 +1513,19 @@ public class Vole{
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 		Scanner inputScanner = new Scanner(System.in);
-		Parser parser = new Parser();
 		Environment env = new Environment();
 		env.concat(Core.getEnv());
 		env.concat(MathLib.getEnv());
-		env.concat(PortsLib.getEnv());
+		env.concat(IOLib.getEnv());
 
 		while(true){
 			try{
 				writer.write("vole>");
 				writer.flush();
 				String input = inputScanner.nextLine();
-				parser.setInput(new StringReader(input));
-				Expression exp = parser.parseSexp();
+				Expression exp = Parser.parseSexp(new StringReader(input));
 				Expression result = Evaluator.eval(exp,env);
-				parser.printExpression(result, writer);
+				Printer.printExpression(result, writer);
 				writer.write("\n");
 				writer.flush();
 			}catch(Exception e){
