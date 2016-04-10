@@ -1163,6 +1163,18 @@ class Core{
 		};
 		env.add(new SymbolVal("boolean?"),isBoolean);
 
+		JavaFunction not = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				exp = ((Pair) exp).getCar();
+				if(exp.isBoolean()){
+					return ((BooleanVal) exp).getVal() ? new BooleanVal(false) : new BooleanVal(true);
+				}else{
+					throw new Exception("(not _) expects a boolean value as an argument.");
+				}
+			}
+		};
+		env.add(new SymbolVal("not"),not);
+
 		JavaFunction isAtom = new JavaFunction(){
 			Expression call(Expression exp){
 				try{
