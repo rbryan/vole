@@ -989,7 +989,7 @@ class Core{
 		//eval just returns a thunk to bounce off
 		//of the trampoline.
 		JavaFunction eval = new JavaFunction(){
-			Expression call(Expression exp){
+			Expression call(Expression exp) throws Exception{
 				Pair list = (Pair) exp;
 				Expression a = list.getCar();
 				Expression b = ((Pair)list.getCdr()).getCar();
@@ -999,7 +999,7 @@ class Core{
 		env.add(new SymbolVal("eval"),eval);
 
 		JavaFunction eq = new JavaFunction(){
-			Expression call(Expression exp){
+			Expression call(Expression exp) throws Exception{
 				Pair list = (Pair) exp;
 				Expression a = list.getCar();
 				Expression b = ((Pair)list.getCdr()).getCar();
@@ -1015,7 +1015,7 @@ class Core{
 		env.add(new SymbolVal("eq?"),eq);
 
 		JavaFunction eqv = new JavaFunction(){
-			Expression call(Expression exp){
+			Expression call(Expression exp) throws Exception{
 				Pair list = (Pair) exp;
 				Expression a = list.getCar();
 				Expression b = ((Pair)list.getCdr()).getCar();
@@ -1048,7 +1048,7 @@ class Core{
 		env.add(new SymbolVal("eqv?"),eqv);
 
 		JavaFunction equals = new JavaFunction(){
-			Expression call(Expression exp){
+			Expression call(Expression exp) throws Exception{
 				Pair list = (Pair) exp;
 				Expression a = list.getCar();
 				Expression b = ((Pair)list.getCdr()).getCar();
@@ -1058,7 +1058,7 @@ class Core{
 		env.add(new SymbolVal("equals?"),equals);
 
 		JavaFunction cons = new JavaFunction(){
-			Expression call(Expression exp){
+			Expression call(Expression exp) throws Exception{
 				Pair list = (Pair) exp;
 				Expression a = list.getCar();
 				Expression b = ((Pair)list.getCdr()).getCar();
@@ -1068,97 +1068,72 @@ class Core{
 		env.add(new SymbolVal("cons"),cons);
 
 		JavaFunction list = new JavaFunction(){
-			Expression call(Expression exp){
+			Expression call(Expression exp) throws Exception{
 				return exp;
 			}
 		};
 		env.add(new SymbolVal("list"),list);
 
 		JavaFunction car = new JavaFunction(){
-			Expression call(Expression exp){
-				try{
-					//get the first argument
-					exp = ((Pair)exp).getCar();
-					if(exp.isPair()){
-						Expression a = ((Pair) exp).getCar();
-						return a;
-					}else{
-						throw new Exception("Car expects a pair as argument.");
-					}
-				}catch(Exception e){
-					e.printStackTrace();
+			Expression call(Expression exp) throws Exception{
+				//get the first argument
+				exp = ((Pair)exp).getCar();
+				if(exp.isPair()){
+					Expression a = ((Pair) exp).getCar();
+					return a;
+				}else{
+					throw new Exception("Car expects a pair as argument.");
 				}
-				return null;
 			}
 		};
 		env.add(new SymbolVal("car"),car);
 
 		JavaFunction cdr = new JavaFunction(){
-			Expression call(Expression exp){
-				try{
-					//get the first argument
-					exp = ((Pair) exp).getCar();
-					if(exp.isPair()){
-						Expression a = ((Pair) exp).getCdr();
-						return a;
-					}else{
-						throw new Exception("Car expects a list as argument.");
-					}
-				}catch(Exception e){
-					e.printStackTrace();
+			Expression call(Expression exp) throws Exception{
+				//get the first argument
+				exp = ((Pair) exp).getCar();
+				if(exp.isPair()){
+					Expression a = ((Pair) exp).getCdr();
+					return a;
+				}else{
+					throw new Exception("Car expects a list as argument.");
 				}
-				return null;
 			}
 		};
 		env.add(new SymbolVal("cdr"),cdr);
 
 		JavaFunction isPair = new JavaFunction(){
-			Expression call(Expression exp){
-				try{
-					exp = ((Pair) exp).getCar();
-					if(exp.isPair()){
-						return new BooleanVal(true);
-					}else{
-						return new BooleanVal(false);
-					}
-				}catch(Exception e){
-					e.printStackTrace();
+			Expression call(Expression exp) throws Exception{
+				exp = ((Pair) exp).getCar();
+				if(exp.isPair()){
+					return new BooleanVal(true);
+				}else{
+					return new BooleanVal(false);
 				}
-				return null;
 			}
 		};
 		env.add(new SymbolVal("pair?"),isPair);
 
 		JavaFunction isSymbol = new JavaFunction(){
-			Expression call(Expression exp){
-				try{
-					exp = ((Pair) exp).getCar();
-					if(exp.isSymbol()){
-						return new BooleanVal(true);
-					}else{
-						return new BooleanVal(false);
-					}
-				}catch(Exception e){
-					e.printStackTrace();
+			Expression call(Expression exp) throws Exception{
+				exp = ((Pair) exp).getCar();
+				if(exp.isSymbol()){
+					return new BooleanVal(true);
+				}else{
+					return new BooleanVal(false);
 				}
-				return null;
 			}
 		};
 		env.add(new SymbolVal("symbol?"),isSymbol);
 
 		JavaFunction isBoolean = new JavaFunction(){
-			Expression call(Expression exp){
-				try{
-					exp = ((Pair) exp).getCar();
-					if(exp.isBoolean()){
-						return new BooleanVal(true);
-					}else{
-						return new BooleanVal(false);
-					}
-				}catch(Exception e){
-					e.printStackTrace();
+			Expression call(Expression exp) throws Exception{
+				exp = ((Pair) exp).getCar();
+				if(exp.isBoolean()){
+					return new BooleanVal(true);
+				}else{
+					return new BooleanVal(false);
 				}
-				return null;
 			}
 		};
 		env.add(new SymbolVal("boolean?"),isBoolean);
@@ -1176,86 +1151,61 @@ class Core{
 		env.add(new SymbolVal("not"),not);
 
 		JavaFunction isAtom = new JavaFunction(){
-			Expression call(Expression exp){
-				try{
-					exp = ((Pair) exp).getCar();
-					if(exp.isAtom()){
-						return new BooleanVal(true);
-					}else{
-						return new BooleanVal(false);
-					}
-				}catch(Exception e){
-					e.printStackTrace();
+			Expression call(Expression exp) throws Exception{
+				exp = ((Pair) exp).getCar();
+				if(exp.isAtom()){
+					return new BooleanVal(true);
+				}else{
+					return new BooleanVal(false);
 				}
-				return null;
 			}
 		};
 		env.add(new SymbolVal("atom?"),isAtom);
 
 		JavaFunction isNumber = new JavaFunction(){
-			Expression call(Expression exp){
-				try{
-					exp = ((Pair) exp).getCar();
-					if(exp.isNumber()){
-						return new BooleanVal(true);
-					}else{
-						return new BooleanVal(false);
-					}
-				}catch(Exception e){
-					e.printStackTrace();
+			Expression call(Expression exp) throws Exception{
+				exp = ((Pair) exp).getCar();
+				if(exp.isNumber()){
+					return new BooleanVal(true);
+				}else{
+					return new BooleanVal(false);
 				}
-				return null;
 			}
 		};
 		env.add(new SymbolVal("number?"),isNumber);
 
 		JavaFunction isString = new JavaFunction(){
-			Expression call(Expression exp){
-				try{
-					exp = ((Pair) exp).getCar();
-					if(exp.isString()){
-						return new BooleanVal(true);
-					}else{
-						return new BooleanVal(false);
-					}
-				}catch(Exception e){
-					e.printStackTrace();
+			Expression call(Expression exp) throws Exception{
+				exp = ((Pair) exp).getCar();
+				if(exp.isString()){
+					return new BooleanVal(true);
+				}else{
+					return new BooleanVal(false);
 				}
-				return null;
 			}
 		};
 		env.add(new SymbolVal("string?"),isString);
 
 		JavaFunction isList = new JavaFunction(){
-			Expression call(Expression exp){
-				try{
-					exp = ((Pair) exp).getCar();
-					if(exp.isList()){
-						return new BooleanVal(true);
-					}else{
-						return new BooleanVal(false);
-					}
-				}catch(Exception e){
-					e.printStackTrace();
+			Expression call(Expression exp) throws Exception{
+				exp = ((Pair) exp).getCar();
+				if(exp.isList()){
+					return new BooleanVal(true);
+				}else{
+					return new BooleanVal(false);
 				}
-				return null;
 			}
 		};
 		env.add(new SymbolVal("list?"),isList);
 
 		JavaFunction isNil = new JavaFunction(){
-			Expression call(Expression exp){
-				try{
-					exp = ((Pair) exp).getCar();
-					if(exp.isNil()){
-						return new BooleanVal(true);
-					}else{
-						return new BooleanVal(false);
-					}
-				}catch(Exception e){
-					e.printStackTrace();
+			Expression call(Expression exp) throws Exception{
+				exp = ((Pair) exp).getCar();
+				if(exp.isNil()){
+					return new BooleanVal(true);
+				}else{
+					return new BooleanVal(false);
 				}
-				return null;
 			}
 		};
 		env.add(new SymbolVal("nil?"),isNil);
