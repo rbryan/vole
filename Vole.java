@@ -51,7 +51,7 @@ abstract class Expression{
 	}
 
 	boolean isPair(){
-		if(this instanceof Pair)
+		if(this instanceof Pair && !this.isNil())
 			return true;
 		return false;
 	}
@@ -81,7 +81,7 @@ abstract class Expression{
 	}
 
 	boolean isNil(){
-		if(this.isPair()){
+		if(this instanceof Pair){
 			Expression car = ((Pair) this).getCar();
 			Expression cdr = ((Pair) this).getCdr();
 			if(car == null && cdr == null)
@@ -1506,14 +1506,11 @@ class IOLib{
 			Expression call(Expression exp) throws Exception{
 				Pair expPair = (Pair) exp;
 				Expression a = expPair.getCar();
-				while(true){
-					if(a.isPort()){
-						Reader input = ((Port) a).getInput();
-						
-						//Java really should have gotos.
-						//This is rediculous.
-						if(input == null)
-							break;
+
+				if(a.isPort()){
+					Reader input = ((Port) a).getInput();
+					
+					if(input != null){
 
 						Expression parsedExp = Parser.parseSexp(input);
 						if(parsedExp != null)
@@ -1521,8 +1518,8 @@ class IOLib{
 						else
 							return new EofVal();
 					}
-					break;
 				}
+
 				throw new Exception("(read _) expects an open input port as an argument.");
 			}
 		};
