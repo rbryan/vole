@@ -1006,7 +1006,7 @@ class Core{
 				//hopefully this does what I think it does.
 				//We need to cast 'a to an object so that we don't use
 				//the atoms equals() function which will actually check values.
-				if(((Object) a).equals(b))
+				if(a == b)
 					return new BooleanVal(true);
 				else
 					return new BooleanVal(false);
