@@ -1243,6 +1243,23 @@ class Core{
 		};
 		env.add(new SymbolVal("list?"),isList);
 
+		JavaFunction isNil = new JavaFunction(){
+			Expression call(Expression exp){
+				try{
+					exp = ((Pair) exp).getCar();
+					if(exp.isNil()){
+						return new BooleanVal(true);
+					}else{
+						return new BooleanVal(false);
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		env.add(new SymbolVal("nil?"),isNil);
+
 		return env;
 	}
 
