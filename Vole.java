@@ -1027,16 +1027,26 @@ class Core{
 					else
 						return new BooleanVal(false);
 				}
-				if(	a.isSymbol() &&
-					b.isSymbol()){
+
+				else if(	a.isSymbol() &&
+						b.isSymbol()){
 					if(((SymbolVal) a).getIdentifier().equals(((SymbolVal) b).getIdentifier()))
 						return new BooleanVal(true);
 					else
 						return new BooleanVal(false);
 				}
-				if(	a.isBoolean() &&
-					b.isBoolean()){
+
+				else if(	a.isBoolean() &&
+						b.isBoolean()){
 					if(((BooleanVal) a).getVal() == ((BooleanVal) b).getVal())
+						return new BooleanVal(true);
+					else
+						return new BooleanVal(false);
+				}
+
+				else if(	a.isString() &&
+						b.isString()){
+					if(((StringVal) a).getVal().equals(((StringVal) b).getVal()))
 						return new BooleanVal(true);
 					else
 						return new BooleanVal(false);
