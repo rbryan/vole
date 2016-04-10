@@ -986,6 +986,15 @@ class Core{
 	static Environment getEnv(){
 		Environment env = new Environment();
 
+		JavaFunction error = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair list = (Pair) exp;
+				Expression a = list.getCar();
+				throw new Exception(((StringVal) a).getVal());
+			}
+		};
+		env.add(new SymbolVal("error"),error);
+
 		//eval just returns a thunk to bounce off
 		//of the trampoline.
 		JavaFunction eval = new JavaFunction(){
