@@ -389,7 +389,9 @@ class Lambda extends ProcedureVal {
 	}
 
 	public String toString(){
-		return "<lambda exp=".concat(exp.toString()).concat(">");
+		StringWriter w = new StringWriter();
+		Printer.printExpression(exp,w);
+		return "<lambda arg=".concat(arg.getIdentifier()).concat(" exp=").concat(w.toString()).concat(">");
 	}
 
 	public boolean equals(Object e){
