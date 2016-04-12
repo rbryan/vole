@@ -738,43 +738,33 @@ class Parser{
 		return c;
 	}
 
-	public static BooleanVal parseBoolean(Reader input){
-		try{
-			input.read();
-			int c = input.read();
-			if(c == 't')
-				return new BooleanVal(true);
-			else if(c == 'f')
-				return new BooleanVal(false);
-			else
-				throw new Exception("Attempted to parse boolean but no boolean to be found.");
-		}catch(Exception e){
-			e.printStackTrace();
-		}
-
-		return null;
+	public static BooleanVal parseBoolean(Reader input) throws Exception{
+		input.read();
+		int c = input.read();
+		if(c == 't')
+			return new BooleanVal(true);
+		else if(c == 'f')
+			return new BooleanVal(false);
+		else
+			throw new Exception("Attempted to parse boolean but no boolean to be found.");
 	}
 
-	public static NumberVal parseNumber(Reader input){
+	public static NumberVal parseNumber(Reader input) throws Exception{
 		StringBuilder builder = new StringBuilder();
 		int c = 0;
 
-		try{
+		c = peek(input);
+		while( 	c != '#' &&
+			c != '(' &&
+			c != ')' &&
+			c != ';' &&
+		(short) c != -1  &&
+			Character.isDigit(c) &&
+			!Character.isWhitespace(c)){
+			
+			builder.append((char) c);
+			input.read();
 			c = peek(input);
-			while( 	c != '#' &&
-				c != '(' &&
-				c != ')' &&
-				c != ';' &&
-			(short) c != -1  &&
-				Character.isDigit(c) &&
-				!Character.isWhitespace(c)){
-				
-				builder.append((char) c);
-				input.read();
-				c = peek(input);
-			}
-		}catch(Exception e){
-			e.printStackTrace();
 		}
 
 		Scanner s = new Scanner(builder.toString());
@@ -782,137 +772,127 @@ class Parser{
 		return new NumberVal(s.nextBigInteger());
 	}
 
-	public static SymbolVal parseSymbol(Reader input){
+	public static SymbolVal parseSymbol(Reader input) throws Exception{
 		StringBuilder builder = new StringBuilder();
 		int c = 0;
 
-		try{
+		c = peek(input);
+		while( 	c != '#' &&
+			c != '(' &&
+			c != ')' &&
+			c != ';' &&
+		(short) c != -1  &&
+			!Character.isWhitespace(c)){
+			
+			builder.append((char) c);
+			input.read();
 			c = peek(input);
-			while( 	c != '#' &&
-				c != '(' &&
-				c != ')' &&
-				c != ';' &&
-			(short) c != -1  &&
-				!Character.isWhitespace(c)){
-				
-				builder.append((char) c);
-				input.read();
-				c = peek(input);
-			}
-		}catch(Exception e){
-			e.printStackTrace();
 		}
 
 		return new SymbolVal(builder.toString());
 
 	}
 
-	public static StringVal parseString(Reader input){
+	public static StringVal parseString(Reader input) throws Exception{
 		StringBuilder builder = new StringBuilder();
 		int c = 0;
 
-		try{
-			//eat the initial '"'
+		//eat the initial '"'
+		input.read();
+		c = peek(input);
+		while( 	c != '"' &&
+			(short) c != -1 ){
+			
+			builder.append((char) c);
 			input.read();
 			c = peek(input);
-			while( 	c != '"' &&
-				(short) c != -1 ){
-				
-				builder.append((char) c);
-				input.read();
-				c = peek(input);
-			}
-			//eat the end '"'
-			input.read();
-		}catch(Exception e){
-			e.printStackTrace();
 		}
+		//eat the end '"'
+		input.read();
 
 		return new StringVal(builder.toString());
 		
 	}
 
-	public static void parseComment(Reader input){
-		Scanner scanner = new Scanner(input);
-		scanner.useDelimiter("[\n]");
-		String s = scanner.next(";.*");
+	public static void parseComment(Reader input) throws Exception{
+		int c = peek(input);
+		while(c != '\n' && (short) c != -1){
+			input.read();
+			c = peek(input);
+		}
 		return;
 	}
 
-	public static Pair parseList(Reader input){
+	public static Pair parseList(Reader input) throws Exception{
 		int c;
 		Pair head = null;
 		Pair tail = null;
 
-		try{
+		c = peek(input);
+
+		if(c == '('){
+			//eat the '('
+			input.read();
+			
 			c = peek(input);
 
-			if(c == '('){
-				//eat the '('
-				input.read();
-				
-				c = peek(input);
+			if((short) c == -1)
+				throw new Exception("Unmatched '(' in file.");
 
-				if((short) c == -1)
-					throw new Exception("Unmatched '(' in file.");
+			while((short) c != ')'){
 
-				while((short) c != ')'){
+				Expression exp = null;
 
-					Expression exp = null;
+				if(c == '(')
+					exp = parseList(input);
 
-					if(c == '(')
-						exp = parseList(input);
+				else if(c == '#')
+					exp = parseBoolean(input);
 
-					else if(c == '#')
-						exp = parseBoolean(input);
-
-					else if(c == ';'){
-						parseComment(input);
-						c = peek(input);
-						continue;
-					}
-					
-					else if(Character.isDigit(c))
-						exp = parseNumber(input);
-
-					else if(c == '"')
-						exp = parseString(input);
-
-					else if(Character.isWhitespace(c)){
-						input.read();
-						c = peek(input);
-						continue;
-					}
-
-					else if((short) c == -1)
-						throw new Exception("Unexpected EOF.");
-
-					//If it's none of those things it must be a symbol
-					else 
-						exp = parseSymbol(input);
-					
-					if(head == null){
-						head = new Pair(exp,null);
-						tail = head;
-					}else{
-						Pair newTail = new Pair(exp,null);
-						tail.setCdr(newTail);
-						tail = newTail;
-					}
-
+				else if(c == ';'){
+					parseComment(input);
 					c = peek(input);
+					continue;
+				}
+				
+				else if(Character.isDigit(c))
+					exp = parseNumber(input);
 
+				else if(c == '"')
+					exp = parseString(input);
+
+				else if(Character.isWhitespace(c)){
+					input.read();
+					c = peek(input);
+					continue;
 				}
 
-				//eat the ')'
-				input.read();
-				
+				else if((short) c == -1)
+					throw new Exception("Unexpected EOF.");
 
-			}else{
-				throw new Exception("parseList() expected to start on a '('.");
+				//If it's none of those things it must be a symbol
+				else 
+					exp = parseSymbol(input);
+				
+				if(head == null){
+					head = new Pair(exp,null);
+					tail = head;
+				}else{
+					Pair newTail = new Pair(exp,null);
+					tail.setCdr(newTail);
+					tail = newTail;
+				}
+
+				c = peek(input);
+
 			}
-		}catch(Exception e){
-			e.printStackTrace();
+
+			//eat the ')'
+			input.read();
+			
+
+		}else{
+			throw new Exception("parseList() expected to start on a '('.");
 		}
 
 		if(head != null)
@@ -924,52 +904,47 @@ class Parser{
 
 	}
 
-	public static Expression parseSexp(Reader input){
+	public static Expression parseSexp(Reader input) throws Exception{
 
 		int c;
 
-		try{
-			c = peek(input);
+		c = peek(input);
 
-			while((short) c != -1){
-				if(Character.isWhitespace(c)){
-					input.read();
-					c = peek(input);
-					continue;
-				}
-
-				else if(c == '#'){
-					return parseBoolean(input);
-				}
-
-				else if(Character.isDigit(c)){
-					return parseNumber(input);
-				}
-				
-				else if(c == '"'){
-					return parseString(input);
-				}
-				
-				else if(c == '('){
-					return parseList(input);
-				}
-
-				else if(c == ';'){
-					parseComment(input);
-					c = peek(input);
-					continue;
-				}
-				else if(c == ')'){
-					throw new Exception("Unmatched ')' found.");
-				}
-
-				else
-					return parseSymbol(input);
-				
-
+		while((short) c != -1){
+			if(Character.isWhitespace(c)){
+				input.read();
+				c = peek(input);
+				continue;
 			}
-		}catch(Exception e){
-			e.printStackTrace();
+
+			else if(c == '#'){
+				return parseBoolean(input);
+			}
+
+			else if(Character.isDigit(c)){
+				return parseNumber(input);
+			}
+			
+			else if(c == '"'){
+				return parseString(input);
+			}
+			
+			else if(c == '('){
+				return parseList(input);
+			}
+
+			else if(c == ';'){
+				parseComment(input);
+				c = peek(input);
+				continue;
+			}
+			else if(c == ')'){
+				throw new Exception("Unmatched ')' found.");
+			}
+
+			else
+				return parseSymbol(input);
+			
 
 		}
 
