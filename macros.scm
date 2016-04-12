@@ -65,7 +65,8 @@
 		       (lambda assignment-list
 			 (;;(let ((body (caddr form)))
 			  (lambda body
-			    (list (list (string->symbol "lambda") (car assignment-list) body) (cadr assignment-list)))
+			    (map (list macro-expand 
+				       (list (list (string->symbol "lambda") (car assignment-list) body) (cadr assignment-list)))))
 			 (caddr form)))
 		       (cadr form))
 
