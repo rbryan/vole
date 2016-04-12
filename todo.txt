@@ -1,0 +1,10 @@
+- apply needs to be a function defined in terms of the actual apply in the
+  interpreter.
+	This means apply shouldn't take an environment argument.
+	This means lambda.getEvalEnvironment can't take an environment
+	The only reason this environment is needed is for self referential
+	lambdas. e.g. recursive lambdas.
+	This could be fixed by moving define out of eval and writing a proper
+	read-eval-print loop in the language. Define define using functions
+	that manipulate environment objects. We can set up an environment for
+	the user that doesn't have such objects or functions.
