@@ -282,7 +282,7 @@ class Pair extends Expression{
 
 	public String toString(){
 		if(this.isNil())
-			return "(quote ())";
+			return "(list)";
 		else
 			return "(cons ".concat(car.toString()).concat(" ").concat(cdr.toString()).concat(")");
 	}
