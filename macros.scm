@@ -22,11 +22,28 @@
   (lambda x
 	  (eval (cons (car x) (cadr x)) (current-environment))))
 
-(define assert
+(define reverse
   (lambda x
-    (if x
-      #t
-      (error "failed assertion"))))
+    (begin
+      (list
+	(define reverse-helper
+	  (lambda y
+	    (if (not (nil? (cdr y)))
+	      (reverse-helper (cons (cons (cadr y) (car y)) (cddr y)))
+	      (car y))))
+	(reverse-helper (cons (list) x))))))
+
+(define map
+  (lambda x
+    (begin
+      (list
+	(define map-helper
+	  (lambda y
+	    (if (not (nil? (cdr y)))
+	      (map-helper (cons (cons (apply (list (car x) (list (cadr y)))) (car y)) (cddr y)))
+	      (car y))))
+	(reverse (map-helper (cons (list) (cadr x))))))))
+
 
 (define macro-expand
   (lambda form
