@@ -1192,6 +1192,18 @@ class Core{
 		};
 		env.add(new SymbolVal("list?"),isList);
 
+		JavaFunction stringToSymbol = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				exp = ((Pair) exp).getCar();
+				if(exp.isString())
+					return new SymbolVal(((StringVal)exp).getVal());
+				else
+					throw new Exception("(string->symbol _) expects a string as an argument.");
+				
+			}
+		};
+		env.add(new SymbolVal("string->symbol"),stringToSymbol);
+
 		JavaFunction isNil = new JavaFunction(){
 			Expression call(Expression exp) throws Exception{
 				exp = ((Pair) exp).getCar();
