@@ -609,8 +609,6 @@ class Evaluator{
 
 					}else if(sym.getIdentifier().equals("lambda"))
 						return new Lambda(cdr,env);
-					else if(sym.getIdentifier().equals("quote"))
-						return ((Pair) cdr).getCar();
 					else if(sym.getIdentifier().equals("define")){
 						if(cdr.isList()){
 							Expression cadr = ((Pair) cdr).getCar();
