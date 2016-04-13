@@ -1395,6 +1395,11 @@ class MathLib{
 }
 
 class IOLib{
+
+	static Port currentInputPort;
+	static Port currentOutputPort;
+	static Port currentErrorPort;
+
 	IOLib(){}
 
 	public static Environment getEnv(){
@@ -1472,6 +1477,66 @@ class IOLib{
 		};
 
 		env.add(new SymbolVal("close-port"),closePort);
+
+		JavaFunction setCurrentInputPort = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair expPair = (Pair) exp;
+				if(exp.isNil())
+					return currentInputPort;
+
+				Expression a = expPair.getCar();
+				if(a.isPort()){
+					currentInputPort = (Port) a;
+					return null;
+				}else{
+					throw new Exception("(current-input-port _) expects a port as an argument or no arguments.");
+				}
+			}
+		};
+
+		env.add(new SymbolVal("current-input-port"),setCurrentInputPort);
+
+		JavaFunction setCurrentOutputPort = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair expPair = (Pair) exp;
+				if(exp.isNil())
+					return currentOutputPort;
+
+				Expression a = expPair.getCar();
+				if(a.isPort()){
+					currentOutputPort = (Port) a;
+					return null;
+				}else if(a.isNil()){
+					return currentOutputPort;
+				}else{
+					throw new Exception("(current-output-port _) expects a port as an argument or no arguments.");
+				}
+			}
+		};
+
+		env.add(new SymbolVal("current-output-port"), setCurrentOutputPort);
+
+		JavaFunction setCurrentErrorPort = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair expPair = (Pair) exp;
+				if(exp.isNil())
+					return currentErrorPort;
+
+				Expression a = expPair.getCar();
+				if(a.isPort()){
+					currentErrorPort = (Port) a;
+					return null;
+				}else if(a.isNil()){
+					return currentErrorPort;
+				}else{
+					throw new Exception("(current-error-port _) expects a port as an argument or no arguments.");
+				}
+			}
+		};
+
+		env.add(new SymbolVal("current-error-port"), setCurrentErrorPort);
+
+
 
 		JavaFunction read = new JavaFunction(){
 			Expression call(Expression exp) throws Exception{
@@ -1555,24 +1620,28 @@ public class Vole{
 
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+		BufferedWriter error = new BufferedWriter(new OutputStreamWriter(System.err));
 		Scanner inputScanner = new Scanner(System.in);
 		Environment env = new Environment();
 		env.concat(CoreLispLib.getEnv());
+		try{
+			Evaluator.eval(new Pair(new SymbolVal("current-input-port"),new Pair(new Port( reader, null),new Pair(null,null))), env);
+			Evaluator.eval(new Pair(new SymbolVal("current-output-port"),new Pair(new Port( null, writer),new Pair(null,null))), env);
+			Evaluator.eval(new Pair(new SymbolVal("current-error-port"),new Pair(new Port( null, error),new Pair(null,null))), env);
 
-		while(true){
-			try{
-				writer.write("vole>");
-				writer.flush();
-				String input = inputScanner.nextLine();
-				Expression exp = Parser.parseSexp(new StringReader(input));
-				Expression result = Evaluator.eval(exp,env);
-				Printer.printExpression(result, writer);
-				writer.write("\n");
-				writer.flush();
-			}catch(Exception e){
-				e.printStackTrace();
-			}
-		}	
+			while(true){
+					writer.write("vole>");
+					writer.flush();
+					String input = inputScanner.nextLine();
+					Expression exp = Parser.parseSexp(new StringReader(input));
+					Expression result = Evaluator.eval(exp,env);
+					Printer.printExpression(result, writer);
+					writer.write("\n");
+					writer.flush();
+			}	
+		}catch(Exception e){
+			e.printStackTrace();
+		}
 
 	}
 
@@ -1580,10 +1649,14 @@ public class Vole{
 
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+		BufferedWriter error = new BufferedWriter(new OutputStreamWriter(System.err));
 		Environment env = new Environment();
 		env.concat(CoreLispLib.getEnv());
-		
 		try{
+			Evaluator.eval(new Pair(new SymbolVal("current-input-port"),new Pair(new Port( reader, null),new Pair(null,null))), env);
+			Evaluator.eval(new Pair(new SymbolVal("current-output-port"),new Pair(new Port( null, writer),new Pair(null,null))), env);
+			Evaluator.eval(new Pair(new SymbolVal("current-error-port"),new Pair(new Port( null, error),new Pair(null,null))), env);
+		
 			Evaluator.load(filename,env);
 		}catch(Exception e){
 			e.printStackTrace();
