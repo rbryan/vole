@@ -560,6 +560,10 @@ class Evaluator{
 		return trampoline(eval_tramp(exp,env));
 	}
 
+	public static Expression eval_string(String expString, Environment env) throws Exception{
+		Expression exp = Parser.parseSexp(new StringReader(expString));
+		return eval(exp,env);
+	}
 
 	public static Expression eval_tramp(Expression exp, Environment env) throws Exception{
 
@@ -981,6 +985,17 @@ class Core{
 			}
 		};
 		env.add(new SymbolVal("eval"),eval);
+
+		JavaFunction apply = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair list = (Pair) exp;
+				Expression fn = list.getCar();
+				Expression args = ((Pair)list.getCdr()).getCar();
+				Expression env = ((Pair) ((Pair) list.getCdr()).getCdr()).getCar();
+				return Evaluator.apply_tramp(fn,args,(Environment) env);
+			}
+		};
+		env.add(new SymbolVal("apply"),apply);
 
 		JavaFunction eq = new JavaFunction(){
 			Expression call(Expression exp) throws Exception{
@@ -1530,6 +1545,14 @@ class CoreLispLib{
 public class Vole{ 
 
 	public static void main(String[] args){
+		if(args.length >= 1)
+			runFile(args[0]);
+		else
+			repl();
+	}
+
+	public static void repl(){
+
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
 		Scanner inputScanner = new Scanner(System.in);
@@ -1550,8 +1573,25 @@ public class Vole{
 				e.printStackTrace();
 			}
 		}	
+
 	}
 
+	public static void runFile(String filename){
+
+		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
+		Environment env = new Environment();
+		env.concat(CoreLispLib.getEnv());
+		
+		try{
+			Evaluator.load(filename,env);
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+
+
+		
+	}
 
 
 

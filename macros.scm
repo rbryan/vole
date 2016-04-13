@@ -12,37 +12,25 @@
   (lambda x
     (car (cdr (cdr x)))))
 
-(define begin
-  (lambda x
-    (if (not (nil? (cdr x)))
-      (begin (cdr x))
-      (car x))))
-
-(define apply
-  (lambda x
-	  (eval (cons (car x) (cadr x)) (current-environment))))
+(define reverse-helper
+  (lambda y
+    (if (not (nil? (cdr y)))
+      (reverse-helper (cons (cons (cadr y) (car y)) (cddr y)))
+      (car y))))
 
 (define reverse
   (lambda x
-    (begin
-      (list
-	(define reverse-helper
-	  (lambda y
-	    (if (not (nil? (cdr y)))
-	      (reverse-helper (cons (cons (cadr y) (car y)) (cddr y)))
-	      (car y))))
-	(reverse-helper (cons (list) x))))))
+	(reverse-helper (cons (list) x))))
+
+(define map-helper
+  (lambda y
+    (if (not (nil? (cdr y)))
+      (map-helper (cons (cons (apply (car x) (list (cadr y)) (current-environment)) (car y)) (cddr y)))
+      (car y))))
 
 (define map
   (lambda x
-    (begin
-      (list
-	(define map-helper
-	  (lambda y
-	    (if (not (nil? (cdr y)))
-	      (map-helper (cons (cons (apply (list (car x) (list (cadr y)))) (car y)) (cddr y)))
-	      (car y))))
-	(reverse (map-helper (cons (list) (cadr x))))))))
+	(reverse (map-helper (cons (list) (cadr x))))))
 
 
 (define macro-expand
@@ -50,9 +38,6 @@
     (if (pair? form)
 	    (;;(let ((expression (car form)))
 	     (lambda keyword
-		(begin
-		  (list
-
 		    ;;these are actually nested ifs like (if ? <then> (if ? <then> ...
 
 		    ;;(quote val) => val
@@ -65,16 +50,16 @@
 		       (lambda assignment-list
 			 (;;(let ((body (caddr form)))
 			  (lambda body
-			    (map (list macro-expand 
+			    (map (list macro-expand
 				       (list (list (string->symbol "lambda") (car assignment-list) body) (cadr assignment-list)))))
 			 (caddr form)))
 		       (cadr form))
 
 
 
-		      #f))
+		      (map (list macro-expand form))))
 
-		    )))
+		    )
 
 	     (car form))
 
