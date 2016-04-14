@@ -1,5 +1,5 @@
 (define top-level-environment
-  (lambda x
+  (lambda nil
     (current-environment)))
 
 (define cadr
@@ -14,25 +14,23 @@
   (lambda x
     (car (cdr (cdr x)))))
 
-(define reverse-helper
+(define reverse
+  ((lambda reverse-helper
+     (lambda x
+	(reverse-helper (cons (list) x))))
   (lambda y
     (if (not (nil? (cdr y)))
       (reverse-helper (cons (cons (cadr y) (car y)) (cddr y)))
-      (car y))))
+      (car y)))))
 
-(define reverse
-  (lambda x
-	(reverse-helper (cons (list) x))))
-
-(define map-helper
+(define map
+  ((lambda map-helper
+     (lambda x
+	(reverse (map-helper (cons (list) (cadr x))))))
   (lambda y
     (if (not (nil? (cdr y)))
       (map-helper (cons (cons (apply (car x) (list (cadr y)) (current-environment)) (car y)) (cddr y)))
-      (car y))))
-
-(define map
-  (lambda x
-	(reverse (map-helper (cons (list) (cadr x))))))
+      (car y)))))
 
 
 (define macro-expand
