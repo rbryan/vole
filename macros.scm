@@ -1,4 +1,6 @@
-(toggle-debug)
+(define top-level-environment
+  (lambda x
+    (current-environment)))
 
 (define cadr
   (lambda x
@@ -55,14 +57,28 @@
 			 (caddr form)))
 		       (cadr form))
 
+		    (if (eqv? keyword (string->symbol "define"))
+		      ((lambda name
+			 ((lambda value
+			    (eval (macro-expand (list (list (string->symbol "lambda") name (read (current-input-port))) value)) (top-level-environment)))
+			  (caddr form)))
+		       (cadr form))
 
 
-		      (map (list macro-expand form))))
+
+		      (map (list macro-expand form)))))
 
 		    )
 
 	     (car form))
 
 	    form)))
+
+(define repl
+  (lambda nil
+	  ((lambda nil
+	     (repl))
+	     (write (eval (macro-expand (read (current-input-port))) (top-level-environment)) (current-output-port)))))
+
 
 

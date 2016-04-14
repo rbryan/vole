@@ -1577,6 +1577,7 @@ class IOLib{
 							break;
 						
 						Printer.printExpression(a,output);
+						output.flush();
 						return null;
 					}
 					break;
@@ -1586,6 +1587,24 @@ class IOLib{
 		};
 
 		env.add(new SymbolVal("write"),write);
+
+		JavaFunction newline = new JavaFunction(){
+			Expression call(Expression exp) throws Exception{
+				Pair expPair = (Pair) exp;
+				Expression a = expPair.getCar();
+				if(a.isPort()){
+					Writer output = ((Port) a).getOutput();
+					if(output == null)
+						throw new Exception("(newline) expects an output port as an argument.");
+					output.write("\n");
+				}
+
+				return null;
+
+			}
+		};
+
+		env.add(new SymbolVal("newline"),newline);
 		
 		return env;
 
