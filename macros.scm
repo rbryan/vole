@@ -62,9 +62,21 @@
 			  (caddr form)))
 		       (cadr form))
 
+		    (if (eqv? keyword (string->symbol "lambda"))
+		      ((lambda args
+			 ((lambda expression
+			    (if (pair? args)
+			      (if (nil? args)
+				(map (list macro-expand (list (string->symbol "lambda") args expression)))
+				(map (list macro-expand (list (string->symbol "lambda") (car args) (list (string->symbol "lambda") (cdr args) expression)))))
+			      (map (list macro-expand (list (string->symbol "lambda") args expression)))))
+			  (caddr form)))
+		       (cadr form))
 
 
-		      (map (list macro-expand form)))))
+
+
+		      (map (list macro-expand form))))))
 
 		    )
 
