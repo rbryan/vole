@@ -86,11 +86,6 @@
 
 	    form)))
 
-(define repl
-  (lambda nil
-	  ((lambda nil
-	     (repl))
-	     (write (eval (macro-expand (read (current-input-port))) (top-level-environment)) (current-output-port)))))
 
 
 

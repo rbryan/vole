@@ -1633,42 +1633,10 @@ class CoreLispLib{
 public class Vole{ 
 
 	public static void main(String[] args){
-		if(args.length >= 1)
-			runFile(args[0]);
-		else
 			repl();
 	}
 
 	public static void repl(){
-
-		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
-		BufferedWriter error = new BufferedWriter(new OutputStreamWriter(System.err));
-		Scanner inputScanner = new Scanner(System.in);
-		Environment env = new Environment();
-		env.concat(CoreLispLib.getEnv());
-		try{
-			Evaluator.eval(new Pair(new SymbolVal("current-input-port"),new Pair(new Port( reader, null),new Pair(null,null))), env);
-			Evaluator.eval(new Pair(new SymbolVal("current-output-port"),new Pair(new Port( null, writer),new Pair(null,null))), env);
-			Evaluator.eval(new Pair(new SymbolVal("current-error-port"),new Pair(new Port( null, error),new Pair(null,null))), env);
-
-			while(true){
-					writer.write("vole>");
-					writer.flush();
-					String input = inputScanner.nextLine();
-					Expression exp = Parser.parseSexp(new StringReader(input));
-					Expression result = Evaluator.eval(exp,env);
-					Printer.printExpression(result, writer);
-					writer.write("\n");
-					writer.flush();
-			}	
-		}catch(Exception e){
-			e.printStackTrace();
-		}
-
-	}
-
-	public static void runFile(String filename){
 
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
@@ -1680,12 +1648,11 @@ public class Vole{
 			Evaluator.eval(new Pair(new SymbolVal("current-output-port"),new Pair(new Port( null, writer),new Pair(null,null))), env);
 			Evaluator.eval(new Pair(new SymbolVal("current-error-port"),new Pair(new Port( null, error),new Pair(null,null))), env);
 		
-			Evaluator.load(filename,env);
+			Evaluator.load("repl.scm",env);
+			Evaluator.eval(new Pair(new SymbolVal("eval-loop"),new Pair(null,null)),env);
 		}catch(Exception e){
 			e.printStackTrace();
 		}
-
-
 		
 	}
 
