@@ -66,9 +66,11 @@
 		      ((lambda args
 			 ((lambda expression
 			    (if (pair? args)
-			      (if (nil? args)
-				(map (list macro-expand (list (string->symbol "lambda") args expression)))
-				(map (list macro-expand (list (string->symbol "lambda") (car args) (list (string->symbol "lambda") (cdr args) expression)))))
+				((lambda lambda-tail
+					(list (string->symbol "lambda") (car args) lambda-tail) )
+				 (if (nil? (cdr args))
+				   (macro-expand expression)
+				   (macro-expand (list (string->symbol "lambda") (cdr args) expression))))
 			      (map (list macro-expand (list (string->symbol "lambda") args expression)))))
 			  (caddr form)))
 		       (cadr form))

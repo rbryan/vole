@@ -539,9 +539,13 @@ class Evaluator{
 
 		if(fn.isLambda()){
 			Lambda lambda = (Lambda) fn;
-			Environment lambdaEnv = lambda.getEvalEnvironment(((Pair)args).getCar(),env);
-			Expression result = new Thunk(lambda.getExp(),lambdaEnv);
-			return result;
+			//((<lambda> first-arg) rest-args)
+			if(args.isList() && !((Pair) args).getCdr().isNil()) {
+				return new Thunk( new Pair( new Pair( lambda, new Pair( ((Pair) args).getCar(), new Pair(null,null))), ((Pair) args).getCdr()),env);
+			}else{
+				Environment lambdaEnv = lambda.getEvalEnvironment(((Pair)args).getCar(),env);
+				return new Thunk(lambda.getExp(),lambdaEnv);
+			}
 		}else if(fn.isJavaFunction()){
 			JavaFunction jfunc = (JavaFunction) fn;
 			return jfunc.call(args);
