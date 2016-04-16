@@ -578,7 +578,10 @@ class Evaluator{
 			writer.flush();
 			System.out.println();
 		}
-		
+
+		if(exp == null)
+			return exp;
+
 		if(exp.isAtom()){
 			if(exp.isSymbol()){
 				Expression val = env.lookUp((SymbolVal) exp);
