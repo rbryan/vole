@@ -1668,4 +1668,16 @@ public class Vole{
 		
 	}
 
+	public void eval(){
+		try{
+			Evaluator.eval(new Pair(new SymbolVal("current-input-port"),new Pair(new Port( reader, null),new Pair(null,null))), env);
+			Evaluator.eval(new Pair(new SymbolVal("current-output-port"),new Pair(new Port( null, writer),new Pair(null,null))), env);
+			Evaluator.eval(new Pair(new SymbolVal("current-error-port"),new Pair(new Port( null, error),new Pair(null,null))), env);
+			Expression exp = Parser.parseSexp(reader);
+			Evaluator.eval(exp,env);
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+
 }
