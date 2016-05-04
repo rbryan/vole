@@ -1,3 +1,5 @@
+package Vole;
+
 import java.io.Reader;
 import java.io.Writer;
 import java.io.FileReader;
@@ -1635,17 +1637,24 @@ class CoreLispLib{
 
 public class Vole{ 
 
-	public static void main(String[] args){
-			repl();
+	BufferedReader reader;
+	BufferedWriter writer;
+	BufferedWriter error;
+
+	Environment env;
+
+	public Vole(Reader input, Writer output, Writer error){
+
+		this.reader = new BufferedReader(new InputStreamReader(System.in));
+		this.writer = new BufferedWriter(new OutputStreamWriter(System.out));
+		this.error = new BufferedWriter(new OutputStreamWriter(System.err));
+		this.env = new Environment();
+		this.env.concat(CoreLispLib.getEnv());
+		
 	}
 
-	public static void repl(){
+	public void repl(){
 
-		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out));
-		BufferedWriter error = new BufferedWriter(new OutputStreamWriter(System.err));
-		Environment env = new Environment();
-		env.concat(CoreLispLib.getEnv());
 		try{
 			Evaluator.eval(new Pair(new SymbolVal("current-input-port"),new Pair(new Port( reader, null),new Pair(null,null))), env);
 			Evaluator.eval(new Pair(new SymbolVal("current-output-port"),new Pair(new Port( null, writer),new Pair(null,null))), env);
@@ -1658,7 +1667,5 @@ public class Vole{
 		}
 		
 	}
-
-
 
 }
